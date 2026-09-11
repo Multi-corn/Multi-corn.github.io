@@ -154,6 +154,8 @@ let conn = null;
 let isHost = false;
 let roomId = '';
 let oppReady = false;
+let myReady = false;
+let gameStarted = false;
 
 const G = {
     myMoney: START_MONEY,
@@ -162,15 +164,15 @@ const G = {
     oppStartMoney: START_MONEY,
     round: 1,
     totalRounds: 2,
-    myTurn: null,          // true=我猜, false=我出题
+    myTurn: null,
     mySecret: '',
     oppSecret: '',
     myGuessHistory: [],
     oppGuessHistory: [],
     guessedRounds: 0,
-    betRounds: 0,          // 宣言回合数
-    roundBetAmount: 0,     // 赌回合固定金额（出题方叫注）
-    currentTurnBet: 0,     // 本回合猜解方叫注额
+    betRounds: 0,
+    roundBetAmount: 0,
+    currentTurnBet: 0,
     phase: 'idle',
 };
 
@@ -228,7 +230,6 @@ function randomSecret() {
 }
 
 // ==================== 投降罚金 ====================
-// 罚金 = 对手开局金 × 10% × 系数 + 本回合猜解方叫注额 × 10% + 基础罚金
 function calcPenalty(oppStartMoney, completedRounds, currentTurnBet) {
     let coeff, base;
     const r = completedRounds;
@@ -257,7 +258,11 @@ function send(obj) {
 
 function handleData(data) {
     switch (data.type) {
-        case 'ready': oppReady = true; onBothReady(); break;
+        case 'ready':
+            oppReady = true;
+            log('对方已准备', 'sys');
+            if (myReady) onBothReady();
+            break;
         case 'secret': G.oppSecret = data.secret; break;
         case 'betRounds':
             G.betRounds = data.rounds;
@@ -279,10 +284,12 @@ function handleData(data) {
 
 // ==================== 流程 ====================
 function onBothReady() {
+    if (gameStarted) return;
+    gameStarted = true;
     log('双方就绪，游戏开始！', 'win');
     document.getElementById('menu').style.display = 'none';
     document.getElementById('game').style.display = 'block';
-    startRound();
+    setTimeout(() => startRound(), 500);
 }
 
 function startRound() {
@@ -295,7 +302,6 @@ function startRound() {
     G.roundBetAmount = 0;
     G.currentTurnBet = 0;
 
-    // 第1局房主猜，第2局房主出题
     G.myTurn = (G.round === 1) ? isHost : !isHost;
 
     if (!G.myTurn) {
@@ -318,7 +324,6 @@ function startRound() {
     }
 }
 
-// 猜解方：宣言回合数
 function showBetRoundsInput() {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
@@ -337,7 +342,6 @@ function showBetRoundsInput() {
     };
 }
 
-// 出题方：叫注（赌回合金额）
 function askBetRoundsResponse(rounds) {
     const minBet = Math.floor(G.oppStartMoney * 0.01);
     const panel = document.getElementById('actionPanel');
@@ -352,7 +356,6 @@ function askBetRoundsResponse(rounds) {
         if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
         if (v > G.myMoney) { log('你的资金不足', 'sys'); return; }
         G.roundBetAmount = v;
-        // 赌回合金额暂不扣款，等结算时转移
         send({ type: 'betRoundsAmount', amount: v });
         log(`你叫注（赌回合）：${fmt(v)}`, 'me');
         panel.innerHTML = '';
@@ -360,7 +363,6 @@ function askBetRoundsResponse(rounds) {
     };
 }
 
-// 猜解方开始猜
 function startGuessing() {
     setTurnBar('轮到你猜，输入 6 位数字', true);
     showGuessInput();
@@ -384,18 +386,15 @@ function showGuessInput() {
     };
 }
 
-// 出题方处理对手猜测
 function handleOppGuess(guess) {
     const result = judge(G.mySecret, guess);
     log(`对手猜：${guess} → ${result}`, 'opp');
     G.oppGuessHistory.push({ guess, result });
     send({ type: 'guessResult', result });
-    // 注意：不在这里增加 guessedRounds，由猜解方那边统一管理
     setTurnBar('等待对手逐回合叫注...', false);
     document.getElementById('actionPanel').innerHTML = '';
 }
 
-// 猜解方收到反馈
 function handleGuessResult(result) {
     log(`反馈：${result}`, 'opp');
     const last = G.myGuessHistory[G.myGuessHistory.length - 1];
@@ -406,10 +405,8 @@ function handleGuessResult(result) {
     G.guessedRounds++;
 
     if (result === '6A0B') {
-        // 猜中
         log('🎉 你猜出了答案！', 'win');
         if (G.guessedRounds <= G.betRounds) {
-            // 在宣言回合内猜中 → 猜解方赢
             const payout = G.roundBetAmount;
             G.oppMoney -= payout;
             G.myMoney += payout;
@@ -418,7 +415,6 @@ function handleGuessResult(result) {
             send({ type: 'solvedResult', winner: 'me', payout: payout });
             endRound('me');
         } else {
-            // 超过宣言回合才猜中 → 出题方赢
             const payout = G.roundBetAmount;
             G.myMoney -= payout;
             G.oppMoney += payout;
@@ -430,9 +426,7 @@ function handleGuessResult(result) {
         return;
     }
 
-    // 未猜中，检查是否超过宣言回合数
     if (G.guessedRounds > G.betRounds) {
-        // 已超过宣言回合，猜解方输
         const payout = G.roundBetAmount;
         G.myMoney -= payout;
         G.oppMoney += payout;
@@ -443,11 +437,9 @@ function handleGuessResult(result) {
         return;
     }
 
-    // 逐回合叫注
     showPerRoundBet();
 }
 
-// 猜解方逐回合叫注
 function showPerRoundBet() {
     const minBet = Math.floor(G.myMoney * 0.01);
     const panel = document.getElementById('actionPanel');
@@ -469,7 +461,6 @@ function showPerRoundBet() {
     };
 }
 
-// 出题方收到逐回合叫注
 function askFollowOrFold(amount) {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
@@ -487,10 +478,7 @@ function askFollowOrFold(amount) {
         setTurnBar('等待对手猜测...', false);
     };
     document.getElementById('foldBtn').onclick = () => {
-        // 投降罚金：用猜解方本回合叫注额
         const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
-
-        // 胜负判定：投降回合 ≤ 宣言回合 → 猜解方赢
         let winner, payout;
         if (G.guessedRounds <= G.betRounds) {
             winner = 'opp';
@@ -505,26 +493,21 @@ function askFollowOrFold(amount) {
             G.oppMoney -= payout;
             log(`你投降，但投降回合(${G.guessedRounds}) > 对手宣言(${G.betRounds})，你赢得赌回合 ${fmt(payout)}`, 'win');
         }
-
-        // 支付罚金
         G.myMoney -= penalty;
         G.oppMoney += penalty;
         log(`你支付投降罚金 ${fmt(penalty)}`, 'me');
-
         send({ type: 'fold', penalty: penalty, winner: winner, roundBetPayout: payout });
         updateStats();
         endRound(winner);
     };
 }
 
-// 猜解方收到对手跟注
 function handleOppFollow(amount) {
     log(`对手跟注 ${fmt(amount)}`, 'opp');
     setTurnBar('对手跟注，继续猜', true);
     showGuessInput();
 }
 
-// 出题方收到对手投降（猜解方不会投降，此处理论上不触发）
 function handleOppFold(penalty, winner, roundBetPayout) {
     log(`对手投降，罚金 ${fmt(penalty)}`, 'win');
     G.myMoney += penalty;
@@ -533,7 +516,6 @@ function handleOppFold(penalty, winner, roundBetPayout) {
     endRound(winner);
 }
 
-// 本局结束
 function endRound(winner) {
     G.phase = 'over';
     document.getElementById('actionPanel').innerHTML = '';
@@ -567,7 +549,9 @@ function setupConnection(c, host) {
     c.on('open', () => {
         setStatus('已连接！');
         log('已连接！', 'win');
+        myReady = true;
         send({ type: 'ready' });
+        if (oppReady) onBothReady();
     });
     c.on('data', handleData);
     c.on('close', () => { setStatus('连接已断开'); log('连接已断开', 'sys'); });
