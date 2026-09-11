@@ -80,7 +80,7 @@ button.danger { background: #da3633; }
     border: 1px solid #30363d;
     border-radius: 8px;
     padding: 10px;
-    height: 280px;
+    height: 300px;
     overflow-y: auto;
     font-size: 13px;
     line-height: 1.7;
@@ -113,9 +113,9 @@ button.danger { background: #da3633; }
     <h2>和电脑对战 · 初始资金 200,000</h2>
     <button id="startBtn">开始游戏</button>
     <div style="font-size:13px;color:#8b949e;margin-top:8px;line-height:1.7">
-        规则：分两局，你先猜一局，电脑猜一局。<br>
-        每局猜解方先宣言几回合内猜出，出题方叫注。<br>
-        每回合猜解方叫注，出题方可选择跟注或投降。
+        分两局：第 1 局你猜，第 2 局电脑猜。<br>
+        每局猜解方先宣言回合数，出题方叫赌回合注。<br>
+        每回合：猜解方叫注 → 出题方跟注/投降 → 猜解方猜 → 立即结算。
     </div>
 </div>
 
@@ -160,10 +160,9 @@ const G = {
     oppSecret: '',
     myGuessHistory: [],
     oppGuessHistory: [],
-    guessedRounds: 0,
-    betRounds: 0,
-    roundBetAmount: 0,
-    currentTurnBet: 0,
+    guessedRounds: 0,      // 本局已完成的回合数
+    betRounds: 0,          // 宣言回合数
+    roundBetAmount: 0,     // 赌回合固定金额
     phase: 'idle',
 };
 
@@ -243,46 +242,17 @@ function calcPenalty(oppStartMoney, completedRounds, currentTurnBet) {
 }
 
 // ==================== 电脑 AI ====================
-// 简单的猜数字 AI：维护候选集合，根据反馈筛选
 let aiCandidates = [];
-let aiLastGuess = '';
-
 function aiInit() {
-    // 随机生成候选（不能全枚举 10^6，太大，用随机采样 + 启发式）
     aiCandidates = [];
-    for (let i = 0; i < 3000; i++) {
-        aiCandidates.push(randomSecret());
-    }
-    aiLastGuess = '';
+    for (let i = 0; i < 5000; i++) aiCandidates.push(randomSecret());
 }
-
 function aiGuess() {
-    if (aiCandidates.length === 0) {
-        // 没候选了，随机
-        return randomSecret();
-    }
-    // 从候选中挑一个（简单策略：随机挑）
-    const idx = Math.floor(Math.random() * aiCandidates.length);
-    return aiCandidates[idx];
+    if (aiCandidates.length === 0) return randomSecret();
+    return aiCandidates[Math.floor(Math.random() * aiCandidates.length)];
 }
-
 function aiFeedback(guess, result) {
-    // 用反馈过滤候选
     aiCandidates = aiCandidates.filter(c => judge(c, guess) === result);
-}
-
-// 电脑判断是否投降：如果剩余候选太多且已完成回合超过宣言回合，倾向投降
-function aiShouldFold(completedRounds, betRounds, myMoney, currentBet) {
-    // 简单策略：如果已完成回合超过宣言回合，且罚金 < 当前下注，就投降
-    const penalty = calcPenalty(G.myStartMoney, completedRounds, currentBet);
-    if (completedRounds > betRounds) {
-        // 已经超过宣言回合，投降对电脑有利（因为电脑赢赌回合）
-        return true;
-    }
-    // 如果罚金太高，跟注
-    if (penalty > myMoney * 0.3) return false;
-    // 否则看运气，30% 概率投降
-    return Math.random() < 0.3;
 }
 
 // ==================== 游戏流程 ====================
@@ -304,16 +274,17 @@ function startRound() {
     G.oppStartMoney = G.oppMoney;
     G.betRounds = 0;
     G.roundBetAmount = 0;
-    G.currentTurnBet = 0;
 
-    // 第1局我猜，第2局电脑猜
     G.myTurn = (G.round === 1);
 
     if (!G.myTurn) {
+        // 我出题
         G.mySecret = randomSecret();
         log(`【第 ${G.round} 局】你出题，题目已生成（${G.mySecret}）`, 'me');
         aiInit();
     } else {
+        // 我猜
+        G.oppSecret = randomSecret();
         log(`【第 ${G.round} 局】你猜解`, 'me');
     }
 
@@ -324,7 +295,8 @@ function startRound() {
         setTurnBar('你是猜解方，宣言你几回合内能猜出', true);
         showBetRoundsInput();
     } else {
-        setTurnBar('电脑正在思考...', false);
+        setTurnBar('电脑正在思考宣言...', false);
+        document.getElementById('actionPanel').innerHTML = '';
         setTimeout(aiDeclareRounds, 1000);
     }
 }
@@ -343,99 +315,34 @@ function showBetRoundsInput() {
         G.betRounds = v;
         log(`你宣言：${v} 回合内猜出`, 'me');
         panel.innerHTML = '';
-        setTurnBar('电脑正在叫注...', false);
+        setTurnBar('电脑正在叫赌回合注...', false);
         setTimeout(aiBetRounds, 800);
     };
 }
 
-// 电脑作为出题方叫注
+// 电脑作为出题方叫赌回合注
 function aiBetRounds() {
     const minBet = Math.floor(G.oppStartMoney * 0.01);
-    // 电脑根据宣言回合数决定叫注：回合数越少，叫注越高
     let amount = minBet * (1 + Math.max(0, (20 - G.betRounds)) / 20);
     amount = Math.min(amount, G.oppMoney);
     amount = Math.round(amount);
     G.roundBetAmount = amount;
     log(`电脑叫注（赌回合）：${fmt(amount)}`, 'opp');
-    setTurnBar('轮到你猜，输入 6 位数字', true);
-    showGuessInput();
+    // 开始逐回合
+    startMyTurnRound();
 }
 
-// 我猜解：输入猜测
-function showGuessInput() {
-    const panel = document.getElementById('actionPanel');
-    panel.innerHTML = `
-        <h2>第 ${G.guessedRounds + 1} 回合 · 输入你的猜测</h2>
-        <input id="guessInput" maxlength="6" placeholder="6 位数字" style="letter-spacing:6px;text-align:center;font-size:20px">
-        <button id="guessBtn">提交猜测</button>
-    `;
-    document.getElementById('guessBtn').onclick = () => {
-        const g = document.getElementById('guessInput').value.trim();
-        if (!/^\d{6}$/.test(g)) { log('必须是 6 位数字', 'sys'); return; }
-        G.myGuessHistory.push(g);
-        log(`你猜：${g}`, 'me');
-        panel.innerHTML = '';
-        const result = judge(G.oppSecret, g);
-        setTimeout(() => handleMyGuessResult(result), 500);
-    };
-    // 第1局开始时电脑已经出了题
-    if (!G.oppSecret) {
-        G.oppSecret = randomSecret();
-    }
-}
-
-function handleMyGuessResult(result) {
-    log(`反馈：${result}`, 'opp');
-    const last = G.myGuessHistory[G.myGuessHistory.length - 1];
-    const div = document.createElement('div');
-    div.textContent = `${last} → ${result}`;
-    document.getElementById('history').appendChild(div);
-
-    G.guessedRounds++;
-
-    if (result === '6A0B') {
-        log('🎉 你猜出了答案！', 'win');
-        if (G.guessedRounds <= G.betRounds) {
-            const payout = G.roundBetAmount;
-            G.oppMoney -= payout;
-            G.myMoney += payout;
-            log(`在宣言回合内猜中，电脑赔付你 ${fmt(payout)}`, 'win');
-            updateStats();
-            endRound('me');
-        } else {
-            const payout = G.roundBetAmount;
-            G.myMoney -= payout;
-            G.oppMoney += payout;
-            log(`超过宣言回合才猜中，你赔付电脑 ${fmt(payout)}`, 'opp');
-            updateStats();
-            endRound('opp');
-        }
-        return;
-    }
-
-    if (G.guessedRounds > G.betRounds) {
-        const payout = G.roundBetAmount;
-        G.myMoney -= payout;
-        G.oppMoney += payout;
-        log(`已超过宣言回合数(${G.betRounds})，你赔付电脑 ${fmt(payout)}`, 'opp');
-        updateStats();
-        endRound('opp');
-        return;
-    }
-
-    showPerRoundBet();
-}
-
-// 我猜解：逐回合叫注
-function showPerRoundBet() {
+// 我的回合开始：叫注
+function startMyTurnRound() {
     const minBet = Math.floor(G.myMoney * 0.01);
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
-        <h2>第 ${G.guessedRounds + 1} 回合叫注</h2>
+        <h2>第 ${G.guessedRounds + 1} 回合 · 你叫注</h2>
         <p style="font-size:13px;color:#8b949e;margin-bottom:8px">最低叫注：${fmt(minBet)}</p>
         <input id="betInput" type="number" min="${minBet}" placeholder="叫注金额" style="letter-spacing:0">
         <button id="betBtn">叫注</button>
     `;
+    setTurnBar(`第 ${G.guessedRounds + 1} 回合：请叫注`, true);
     document.getElementById('betBtn').onclick = () => {
         let v = parseInt(document.getElementById('betInput').value);
         if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
@@ -444,61 +351,101 @@ function showPerRoundBet() {
         log(`你叫注：${fmt(v)}`, 'me');
         panel.innerHTML = '';
         setTurnBar('电脑正在决定跟注或投降...', false);
-        setTimeout(aiDecideFollowOrFold, 800);
+        setTimeout(aiFollowOrFold, 800);
     };
 }
 
 // 电脑决定跟注或投降
-function aiDecideFollowOrFold() {
+function aiFollowOrFold() {
     const amount = G.currentTurnBet;
-    if (aiShouldFold(G.guessedRounds, G.betRounds, G.oppMoney, amount)) {
-        // 电脑投降
-        const penalty = calcPenalty(G.myStartMoney, G.guessedRounds, amount);
-        let winner, payout;
-        if (G.guessedRounds <= G.betRounds) {
-            winner = 'me';
-            payout = G.roundBetAmount;
-            G.oppMoney -= payout;
-            G.myMoney += payout;
-            log(`电脑投降，投降回合(${G.guessedRounds}) ≤ 你的宣言(${G.betRounds})，你赢得赌回合 ${fmt(payout)}`, 'win');
-        } else {
-            winner = 'opp';
-            payout = G.roundBetAmount;
-            G.myMoney -= payout;
-            G.oppMoney += payout;
-            log(`电脑投降，但投降回合(${G.guessedRounds}) > 你的宣言(${G.betRounds})，电脑赢得赌回合 ${fmt(payout)}`, 'opp');
-        }
-        G.oppMoney -= penalty;
-        G.myMoney += penalty;
-        log(`电脑支付投降罚金 ${fmt(penalty)}`, 'win');
-        updateStats();
-        endRound(winner);
+    // 简单策略
+    let fold = false;
+    if (G.guessedRounds > G.betRounds) {
+        fold = Math.random() < 0.7; // 超过宣言回合，倾向投降
     } else {
-        // 电脑跟注
-        if (G.oppMoney < amount) {
-            log('电脑资金不足，被迫投降', 'sys');
-            aiDecideFollowOrFold();
-            return;
-        }
+        fold = Math.random() < 0.15; // 否则偶尔投降
+    }
+    // 资金不足只能投降
+    if (G.oppMoney < amount) fold = true;
+
+    if (fold) {
+        doFold('opp');
+    } else {
         G.oppMoney -= amount;
         log(`电脑跟注 ${fmt(amount)}`, 'opp');
         updateStats();
-        setTurnBar('电脑跟注，继续猜', true);
-        showGuessInput();
+        // 轮到猜解方猜
+        showMyGuessInput();
     }
 }
 
-// ===== 电脑猜解：宣言回合数 =====
+// 猜解方猜测
+function showMyGuessInput() {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>第 ${G.guessedRounds + 1} 回合 · 输入你的猜测</h2>
+        <input id="guessInput" maxlength="6" placeholder="6 位数字" style="letter-spacing:6px;text-align:center;font-size:20px">
+        <button id="guessBtn">提交猜测</button>
+    `;
+    setTurnBar('输入你的猜测', true);
+    document.getElementById('guessBtn').onclick = () => {
+        const g = document.getElementById('guessInput').value.trim();
+        if (!/^\d{6}$/.test(g)) { log('必须是 6 位数字', 'sys'); return; }
+        G.myGuessHistory.push(g);
+        log(`你猜：${g}`, 'me');
+        panel.innerHTML = '';
+        const result = judge(G.oppSecret, g);
+        setTimeout(() => settleMyRound(result, g), 400);
+    };
+}
+
+// 结算我这一回合
+function settleMyRound(result, guess) {
+    log(`反馈：${result}`, 'opp');
+    const div = document.createElement('div');
+    div.textContent = `${guess} → ${result}`;
+    document.getElementById('history').appendChild(div);
+
+    const stake = G.currentTurnBet; // 桌上双方各押了 stake
+
+    if (result === '6A0B') {
+        // 猜对：桌上 2*stake 全归我
+        G.myMoney += stake * 2;
+        log(`✅ 猜对！你赢得本回合赌注 ${fmt(stake * 2)}`, 'win');
+        updateStats();
+        // 本局结束，结算赌回合
+        settleRoundBet('me');
+        return;
+    } else {
+        // 猜错：桌上 2*stake 全归电脑
+        G.oppMoney += stake * 2;
+        log(`❌ 猜错，本回合赌注 ${fmt(stake * 2)} 归电脑`, 'opp');
+        updateStats();
+    }
+
+    G.guessedRounds++;
+
+    // 检查是否超过宣言回合数
+    if (G.guessedRounds >= G.betRounds) {
+        // 已到宣言回合数还没猜中，本局结束
+        log(`已用完 ${G.betRounds} 回合未猜中`, 'sys');
+        settleRoundBet('opp');
+        return;
+    }
+
+    // 继续下一回合
+    setTimeout(startMyTurnRound, 800);
+}
+
+// ===== 电脑猜解 =====
 function aiDeclareRounds() {
-    // 电脑宣言：根据难度，随机 5-15 回合
     const rounds = 5 + Math.floor(Math.random() * 11);
     G.betRounds = rounds;
     log(`电脑宣言：${rounds} 回合内猜出`, 'opp');
-    setTurnBar('轮到你叫注', true);
+    setTurnBar('轮到你叫赌回合注', true);
     showBetRoundsResponse(rounds);
 }
 
-// 我作为出题方叫注
 function showBetRoundsResponse(rounds) {
     const minBet = Math.floor(G.oppStartMoney * 0.01);
     const panel = document.getElementById('actionPanel');
@@ -511,80 +458,27 @@ function showBetRoundsResponse(rounds) {
     document.getElementById('betBtn').onclick = () => {
         let v = parseInt(document.getElementById('betInput').value);
         if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
-        if (v > G.myMoney) { log('你的资金不足', 'sys'); return; }
+        if (v > G.myMoney) { log('资金不足', 'sys'); return; }
         G.roundBetAmount = v;
         log(`你叫注（赌回合）：${fmt(v)}`, 'me');
         panel.innerHTML = '';
-        setTurnBar('电脑正在猜测...', false);
-        setTimeout(aiTurn, 1000);
+        setTimeout(aiTurnBet, 800);
     };
 }
 
-// 电脑回合：猜测
-function aiTurn() {
-    const guess = aiGuess();
-    aiLastGuess = guess;
-    G.oppGuessHistory.push(guess);
-    log(`电脑猜：${guess}`, 'opp');
-
-    const result = judge(G.mySecret, guess);
-    setTimeout(() => {
-        log(`反馈：${result}`, 'me');
-        const div = document.createElement('div');
-        div.textContent = `电脑: ${guess} → ${result}`;
-        document.getElementById('history').appendChild(div);
-
-        G.guessedRounds++;
-
-        if (result === '6A0B') {
-            log('电脑猜出了答案！', 'opp');
-            if (G.guessedRounds <= G.betRounds) {
-                const payout = G.roundBetAmount;
-                G.myMoney -= payout;
-                G.oppMoney += payout;
-                log(`电脑在宣言回合内猜中，你赔付 ${fmt(payout)}`, 'opp');
-                updateStats();
-                endRound('opp');
-            } else {
-                const payout = G.roundBetAmount;
-                G.oppMoney -= payout;
-                G.myMoney += payout;
-                log(`电脑超过宣言回合才猜中，电脑赔付你 ${fmt(payout)}`, 'win');
-                updateStats();
-                endRound('me');
-            }
-            return;
-        }
-
-        if (G.guessedRounds > G.betRounds) {
-            const payout = G.roundBetAmount;
-            G.oppMoney -= payout;
-            G.myMoney += payout;
-            log(`已超过宣言回合数(${G.betRounds})，电脑赔付你 ${fmt(payout)}`, 'win');
-            updateStats();
-            endRound('me');
-            return;
-        }
-
-        // 电脑逐回合叫注
-        aiRoundBet();
-    }, 500);
-}
-
-// 电脑逐回合叫注
-function aiRoundBet() {
+// 电脑作为猜解方叫注
+function aiTurnBet() {
     const minBet = Math.floor(G.oppMoney * 0.01);
-    // 电脑叫注：基于资金和剩余回合
-    let amount = Math.max(minBet, Math.floor(G.oppMoney * 0.03));
+    let amount = Math.max(minBet, Math.floor(G.oppMoney * 0.02));
     amount = Math.min(amount, G.oppMoney);
     G.currentTurnBet = amount;
     log(`电脑叫注：${fmt(amount)}`, 'opp');
     setTurnBar('电脑叫注，你选择跟注或投降', true);
-    showFollowOrFold(amount);
+    showMyFollowOrFold(amount);
 }
 
-// 我选择跟注或投降
-function showFollowOrFold(amount) {
+// 我作为出题方选择跟注或投降
+function showMyFollowOrFold(amount) {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
         <h2>电脑叫注 ${fmt(amount)}</h2>
@@ -597,12 +491,74 @@ function showFollowOrFold(amount) {
         log(`你跟注 ${fmt(amount)}`, 'me');
         updateStats();
         panel.innerHTML = '';
-        setTurnBar('电脑继续猜...', false);
-        setTimeout(aiTurn, 1000);
+        setTimeout(aiGuessTurn, 800);
     };
     document.getElementById('foldBtn').onclick = () => {
-        const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
-        let winner, payout;
+        doFold('me');
+    };
+}
+
+// 电脑猜测
+function aiGuessTurn() {
+    const guess = aiGuess();
+    G.oppGuessHistory.push(guess);
+    log(`电脑猜：${guess}`, 'opp');
+
+    const result = judge(G.mySecret, guess);
+    setTimeout(() => {
+        log(`反馈：${result}`, 'me');
+        const div = document.createElement('div');
+        div.textContent = `电脑: ${guess} → ${result}`;
+        document.getElementById('history').appendChild(div);
+        settleAiRound(result, guess);
+    }, 400);
+}
+
+// 结算电脑这一回合
+function settleAiRound(result, guess) {
+    const stake = G.currentTurnBet;
+
+    if (result === '6A0B') {
+        // 电脑猜对：桌上 2*stake 全归电脑
+        G.oppMoney += stake * 2;
+        log(`电脑猜对，赢得本回合赌注 ${fmt(stake * 2)}`, 'opp');
+        updateStats();
+        settleRoundBet('opp');
+        return;
+    } else {
+        // 电脑猜错：桌上 2*stake 全归我
+        G.myMoney += stake * 2;
+        log(`电脑猜错，本回合赌注 ${fmt(stake * 2)} 归你`, 'win');
+        updateStats();
+    }
+
+    G.guessedRounds++;
+
+    if (G.guessedRounds >= G.betRounds) {
+        log(`电脑已用完 ${G.betRounds} 回合未猜中`, 'sys');
+        settleRoundBet('me');
+        return;
+    }
+
+    // 电脑继续下一回合
+    setTimeout(aiNextRoundBet, 800);
+}
+
+// 电脑下一回合叫注
+function aiNextRoundBet() {
+    aiFeedback(G.oppGuessHistory[G.oppGuessHistory.length - 1], judge(G.mySecret, G.oppGuessHistory[G.oppGuessHistory.length - 1]));
+    aiTurnBet();
+}
+
+// ===== 投降 =====
+// by: 'me' 或 'opp' 表示谁投降
+function doFold(by) {
+    const amount = G.currentTurnBet;
+    let penalty, winner, payout;
+
+    if (by === 'me') {
+        // 我投降（我是出题方）
+        penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
         if (G.guessedRounds <= G.betRounds) {
             winner = 'opp';
             payout = G.roundBetAmount;
@@ -621,7 +577,46 @@ function showFollowOrFold(amount) {
         log(`你支付投降罚金 ${fmt(penalty)}`, 'me');
         updateStats();
         endRound(winner);
-    };
+    } else {
+        // 电脑投降（电脑是出题方）
+        penalty = calcPenalty(G.myStartMoney, G.guessedRounds, amount);
+        if (G.guessedRounds <= G.betRounds) {
+            winner = 'me';
+            payout = G.roundBetAmount;
+            G.oppMoney -= payout;
+            G.myMoney += payout;
+            log(`电脑投降，投降回合(${G.guessedRounds}) ≤ 你的宣言(${G.betRounds})，你赢得赌回合 ${fmt(payout)}`, 'win');
+        } else {
+            winner = 'opp';
+            payout = G.roundBetAmount;
+            G.myMoney -= payout;
+            G.oppMoney += payout;
+            log(`电脑投降，但投降回合(${G.guessedRounds}) > 你的宣言(${G.betRounds})，电脑赢得赌回合 ${fmt(payout)}`, 'opp');
+        }
+        G.oppMoney -= penalty;
+        G.myMoney += penalty;
+        log(`电脑支付投降罚金 ${fmt(penalty)}`, 'win');
+        updateStats();
+        endRound(winner);
+    }
+}
+
+// ===== 赌回合结算（本局结束时）=====
+// winner: 'me' 或 'opp' 表示谁赢赌回合
+function settleRoundBet(winner) {
+    // 赌回合金额由输方付给赢方
+    const payout = G.roundBetAmount;
+    if (winner === 'me') {
+        G.oppMoney -= payout;
+        G.myMoney += payout;
+        log(`本局你赢，获得赌回合注 ${fmt(payout)}`, 'win');
+    } else {
+        G.myMoney -= payout;
+        G.oppMoney += payout;
+        log(`本局你输，支付赌回合注 ${fmt(payout)}`, 'opp');
+    }
+    updateStats();
+    endRound(winner);
 }
 
 // ===== 本局结束 =====
@@ -651,8 +646,6 @@ function endRound(winner) {
 
 // ==================== 初始化 ====================
 document.getElementById('startBtn').onclick = () => {
-    // 第一局我猜，先生成电脑的题目
-    G.oppSecret = randomSecret();
     startGame();
 };
 
