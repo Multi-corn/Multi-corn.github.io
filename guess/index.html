@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>猜数字对决</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: "Microsoft YaHei", Arial, sans-serif;
+    background: #0f1626;
+    color: #e6edf3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+}
+h1 { font-size: 22px; color: #58a6ff; margin-bottom: 12px; font-weight: normal; }
+.panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 18px;
+    width: 100%;
+    max-width: 520px;
+    margin-bottom: 12px;
+}
+.panel h2 { font-size: 15px; color: #8b949e; margin-bottom: 10px; font-weight: normal; }
+input, button {
+    font-family: inherit;
+    font-size: 15px;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    outline: none;
+}
+input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0d1117;
+    color: #e6edf3;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+input:focus { border-color: #58a6ff; }
+button {
+    padding: 10px 16px;
+    background: #238636;
+    color: #fff;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.2s;
+    width: 100%;
+    margin-bottom: 8px;
+}
+button:hover { opacity: 0.85; }
+button:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+button.sec { background: #21262d; border: 1px solid #30363d; }
+button.danger { background: #da3633; }
+#status { font-size: 13px; color: #8b949e; min-height: 18px; margin-top: 6px; text-align: center; }
+#game { display: none; width: 100%; max-width: 520px; }
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.stat {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px;
+}
+.stat .label { font-size: 12px; color: #8b949e; }
+.stat .value { font-size: 20px; font-weight: bold; margin-top: 4px; }
+.green { color: #3fb950; }
+.pink { color: #f778ba; }
+.gold { color: #d29922; }
+#log {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px;
+    height: 260px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 10px;
+}
+#log .me { color: #3fb950; }
+#log .opp { color: #f778ba; }
+#log .sys { color: #8b949e; font-style: italic; }
+#log .win { color: #d29922; font-weight: bold; }
+.turn {
+    text-align: center;
+    font-size: 14px;
+    padding: 8px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.turn.active { border-color: #3fb950; color: #3fb950; }
+.turn.wait { color: #8b949e; }
+#history { font-size: 12px; color: #8b949e; margin-top: 8px; }
+#history div { padding: 2px 0; }
+</style>
+</head>
+<body>
+
+<h1>🎯 猜数字对决</h1>
+
+<div id="menu" class="panel">
+    <h2>房间号（相同即可对战）</h2>
+    <input id="roomInput" placeholder="输入房间号，如 8888" maxlength="10">
+    <button id="createBtn">创建房间</button>
+    <button id="joinBtn" class="sec">加入房间</button>
+    <button id="matchBtn" class="sec">随机匹配</button>
+    <div id="status">初始资金：200,000</div>
+</div>
+
+<div id="game">
+    <div class="stats">
+        <div class="stat">
+            <div class="label">我 <span class="green">●</span></div>
+            <div class="value green" id="myMoney">200,000</div>
+            <div class="label" style="margin-top:6px">身份：<span id="myRole">-</span></div>
+        </div>
+        <div class="stat">
+            <div class="label">对手 <span class="pink">●</span></div>
+            <div class="value pink" id="oppMoney">200,000</div>
+            <div class="label" style="margin-top:6px">身份：<span id="oppRole">-</span></div>
+        </div>
+    </div>
+
+    <div class="turn wait" id="turnBar">等待连接...</div>
+
+    <div id="log"></div>
+
+    <div class="panel" id="actionPanel"></div>
+
+    <div id="history"></div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+// ==================== 常量 ====================
+const START_MONEY = 200000;
+const DIGITS = 6;
+
+// ==================== 全局状态 ====================
+let peer = null;
+let conn = null;
+let isHost = false;
+let roomId = '';
+let oppReady = false;
+
+const G = {
+    myMoney: START_MONEY,
+    oppMoney: START_MONEY,
+    myStartMoney: START_MONEY,
+    oppStartMoney: START_MONEY,
+    round: 1,
+    totalRounds: 2,
+    myTurn: null,          // true=我猜, false=我出题
+    mySecret: '',
+    oppSecret: '',
+    myGuessHistory: [],
+    oppGuessHistory: [],
+    guessedRounds: 0,
+    betRounds: 0,          // 宣言回合数
+    roundBetAmount: 0,     // 赌回合固定金额（出题方叫注）
+    currentTurnBet: 0,     // 本回合猜解方叫注额
+    phase: 'idle',
+};
+
+// ==================== 工具 ====================
+function fmt(n) { return Math.round(n).toLocaleString('zh-CN'); }
+
+function log(msg, cls = 'sys') {
+    const el = document.getElementById('log');
+    const div = document.createElement('div');
+    div.className = cls;
+    div.textContent = msg;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+}
+
+function updateStats() {
+    document.getElementById('myMoney').textContent = fmt(G.myMoney);
+    document.getElementById('oppMoney').textContent = fmt(G.oppMoney);
+    let myRole = '-', oppRole = '-';
+    if (G.myTurn === true) { myRole = '猜解方'; oppRole = '出题方'; }
+    else if (G.myTurn === false) { myRole = '出题方'; oppRole = '猜解方'; }
+    document.getElementById('myRole').textContent = myRole;
+    document.getElementById('oppRole').textContent = oppRole;
+}
+
+function setTurnBar(text, active) {
+    const bar = document.getElementById('turnBar');
+    bar.textContent = text;
+    bar.className = 'turn ' + (active ? 'active' : 'wait');
+}
+
+function judge(secret, guess) {
+    let A = 0, B = 0;
+    const s = secret.split('');
+    const g = guess.split('');
+    const sUsed = new Array(DIGITS).fill(false);
+    const gUsed = new Array(DIGITS).fill(false);
+    for (let i = 0; i < DIGITS; i++) {
+        if (s[i] === g[i]) { A++; sUsed[i] = true; gUsed[i] = true; }
+    }
+    for (let i = 0; i < DIGITS; i++) {
+        if (sUsed[i]) continue;
+        for (let j = 0; j < DIGITS; j++) {
+            if (gUsed[j]) continue;
+            if (s[i] === g[j]) { B++; sUsed[i] = true; gUsed[j] = true; break; }
+        }
+    }
+    return `${A}A${B}B`;
+}
+
+function randomSecret() {
+    let s = '';
+    for (let i = 0; i < DIGITS; i++) s += Math.floor(Math.random() * 10);
+    return s;
+}
+
+// ==================== 投降罚金 ====================
+// 罚金 = 对手开局金 × 10% × 系数 + 本回合猜解方叫注额 × 10% + 基础罚金
+function calcPenalty(oppStartMoney, completedRounds, currentTurnBet) {
+    let coeff, base;
+    const r = completedRounds;
+    if (r <= 10) {
+        coeff = (50 + r) / 100;
+        base = oppStartMoney * 0.05;
+    } else if (r <= 20) {
+        coeff = (50 + r) / 100;
+        base = oppStartMoney * 0.10;
+    } else if (r <= 30) {
+        coeff = (50 - r) / 100;
+        base = oppStartMoney * 0.20;
+    } else {
+        coeff = (50 - r) / 100;
+        base = 0;
+    }
+    if (coeff < 0) coeff = 0;
+    const penalty = oppStartMoney * 0.10 * coeff + currentTurnBet * 0.10 + base;
+    return Math.max(0, Math.round(penalty));
+}
+
+// ==================== 网络 ====================
+function send(obj) {
+    if (conn && conn.open) conn.send(obj);
+}
+
+function handleData(data) {
+    switch (data.type) {
+        case 'ready': oppReady = true; onBothReady(); break;
+        case 'secret': G.oppSecret = data.secret; break;
+        case 'betRounds':
+            G.betRounds = data.rounds;
+            log(`对手宣言：${data.rounds} 回合内猜出`, 'opp');
+            askBetRoundsResponse(data.rounds);
+            break;
+        case 'betRoundsAmount':
+            G.roundBetAmount = data.amount;
+            log(`出题方叫注（赌回合）：${fmt(data.amount)}`, 'opp');
+            startGuessing();
+            break;
+        case 'guess': handleOppGuess(data.guess); break;
+        case 'guessResult': handleGuessResult(data.result); break;
+        case 'roundBet': askFollowOrFold(data.amount); break;
+        case 'fold': handleOppFold(data.penalty, data.winner, data.roundBetPayout); break;
+        case 'follow': handleOppFollow(data.amount); break;
+    }
+}
+
+// ==================== 流程 ====================
+function onBothReady() {
+    log('双方就绪，游戏开始！', 'win');
+    document.getElementById('menu').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+    startRound();
+}
+
+function startRound() {
+    G.guessedRounds = 0;
+    G.myGuessHistory = [];
+    G.oppGuessHistory = [];
+    G.myStartMoney = G.myMoney;
+    G.oppStartMoney = G.oppMoney;
+    G.betRounds = 0;
+    G.roundBetAmount = 0;
+    G.currentTurnBet = 0;
+
+    // 第1局房主猜，第2局房主出题
+    G.myTurn = (G.round === 1) ? isHost : !isHost;
+
+    if (!G.myTurn) {
+        G.mySecret = randomSecret();
+        send({ type: 'secret', secret: G.mySecret });
+        log(`【第 ${G.round} 局】你出题，题目已生成`, 'me');
+    } else {
+        log(`【第 ${G.round} 局】你猜解`, 'me');
+    }
+
+    updateStats();
+    document.getElementById('history').innerHTML = '';
+
+    if (G.myTurn) {
+        setTurnBar('你是猜解方，宣言你几回合内能猜出', true);
+        showBetRoundsInput();
+    } else {
+        setTurnBar('你是出题方，等待对手宣言...', false);
+        document.getElementById('actionPanel').innerHTML = '';
+    }
+}
+
+// 猜解方：宣言回合数
+function showBetRoundsInput() {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>宣言：你几回合内能猜出答案？</h2>
+        <input id="roundsInput" type="number" min="1" max="99" placeholder="例如 10" style="letter-spacing:0">
+        <button id="declareBtn">宣言</button>
+    `;
+    document.getElementById('declareBtn').onclick = () => {
+        const v = parseInt(document.getElementById('roundsInput').value);
+        if (!v || v < 1) { log('请输入有效回合数', 'sys'); return; }
+        G.betRounds = v;
+        send({ type: 'betRounds', rounds: v });
+        log(`你宣言：${v} 回合内猜出`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待出题方叫注...', false);
+    };
+}
+
+// 出题方：叫注（赌回合金额）
+function askBetRoundsResponse(rounds) {
+    const minBet = Math.floor(G.oppStartMoney * 0.01);
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>对手宣言 ${rounds} 回合内猜出</h2>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px">最低叫注：${fmt(minBet)}</p>
+        <input id="betInput" type="number" min="${minBet}" placeholder="赌回合叫注金额" style="letter-spacing:0">
+        <button id="betBtn">叫注</button>
+    `;
+    document.getElementById('betBtn').onclick = () => {
+        let v = parseInt(document.getElementById('betInput').value);
+        if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
+        if (v > G.myMoney) { log('你的资金不足', 'sys'); return; }
+        G.roundBetAmount = v;
+        // 赌回合金额暂不扣款，等结算时转移
+        send({ type: 'betRoundsAmount', amount: v });
+        log(`你叫注（赌回合）：${fmt(v)}`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待对手猜测...', false);
+    };
+}
+
+// 猜解方开始猜
+function startGuessing() {
+    setTurnBar('轮到你猜，输入 6 位数字', true);
+    showGuessInput();
+}
+
+function showGuessInput() {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>第 ${G.guessedRounds + 1} 回合 · 输入你的猜测</h2>
+        <input id="guessInput" maxlength="6" placeholder="6 位数字" style="letter-spacing:6px;text-align:center;font-size:20px">
+        <button id="guessBtn">提交猜测</button>
+    `;
+    document.getElementById('guessBtn').onclick = () => {
+        const g = document.getElementById('guessInput').value.trim();
+        if (!/^\d{6}$/.test(g)) { log('必须是 6 位数字', 'sys'); return; }
+        send({ type: 'guess', guess: g });
+        G.myGuessHistory.push(g);
+        log(`你猜：${g}`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待反馈...', false);
+    };
+}
+
+// 出题方处理对手猜测
+function handleOppGuess(guess) {
+    const result = judge(G.mySecret, guess);
+    log(`对手猜：${guess} → ${result}`, 'opp');
+    G.oppGuessHistory.push({ guess, result });
+    send({ type: 'guessResult', result });
+    // 注意：不在这里增加 guessedRounds，由猜解方那边统一管理
+    setTurnBar('等待对手逐回合叫注...', false);
+    document.getElementById('actionPanel').innerHTML = '';
+}
+
+// 猜解方收到反馈
+function handleGuessResult(result) {
+    log(`反馈：${result}`, 'opp');
+    const last = G.myGuessHistory[G.myGuessHistory.length - 1];
+    const div = document.createElement('div');
+    div.textContent = `${last} → ${result}`;
+    document.getElementById('history').appendChild(div);
+
+    G.guessedRounds++;
+
+    if (result === '6A0B') {
+        // 猜中
+        log('🎉 你猜出了答案！', 'win');
+        if (G.guessedRounds <= G.betRounds) {
+            // 在宣言回合内猜中 → 猜解方赢
+            const payout = G.roundBetAmount;
+            G.oppMoney -= payout;
+            G.myMoney += payout;
+            log(`在宣言回合内猜中，出题方赔付你 ${fmt(payout)}`, 'win');
+            updateStats();
+            send({ type: 'solvedResult', winner: 'me', payout: payout });
+            endRound('me');
+        } else {
+            // 超过宣言回合才猜中 → 出题方赢
+            const payout = G.roundBetAmount;
+            G.myMoney -= payout;
+            G.oppMoney += payout;
+            log(`超过宣言回合才猜中，你赔付出题方 ${fmt(payout)}`, 'opp');
+            updateStats();
+            send({ type: 'solvedResult', winner: 'opp', payout: payout });
+            endRound('opp');
+        }
+        return;
+    }
+
+    // 未猜中，检查是否超过宣言回合数
+    if (G.guessedRounds > G.betRounds) {
+        // 已超过宣言回合，猜解方输
+        const payout = G.roundBetAmount;
+        G.myMoney -= payout;
+        G.oppMoney += payout;
+        log(`已超过宣言回合数(${G.betRounds})，你赔付出题方 ${fmt(payout)}`, 'opp');
+        updateStats();
+        send({ type: 'solvedResult', winner: 'opp', payout: payout });
+        endRound('opp');
+        return;
+    }
+
+    // 逐回合叫注
+    showPerRoundBet();
+}
+
+// 猜解方逐回合叫注
+function showPerRoundBet() {
+    const minBet = Math.floor(G.myMoney * 0.01);
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>第 ${G.guessedRounds + 1} 回合叫注</h2>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px">最低叫注：${fmt(minBet)}</p>
+        <input id="betInput" type="number" min="${minBet}" placeholder="叫注金额" style="letter-spacing:0">
+        <button id="betBtn">叫注</button>
+    `;
+    document.getElementById('betBtn').onclick = () => {
+        let v = parseInt(document.getElementById('betInput').value);
+        if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
+        if (v > G.myMoney) { log('资金不足', 'sys'); return; }
+        G.currentTurnBet = v;
+        send({ type: 'roundBet', amount: v });
+        log(`你叫注：${fmt(v)}`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待对手跟注或投降...', false);
+    };
+}
+
+// 出题方收到逐回合叫注
+function askFollowOrFold(amount) {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>对手叫注 ${fmt(amount)}</h2>
+        <button id="followBtn">跟注（继续）</button>
+        <button id="foldBtn" class="danger">投降</button>
+    `;
+    document.getElementById('followBtn').onclick = () => {
+        if (G.myMoney < amount) { log('资金不足，只能投降', 'sys'); return; }
+        G.myMoney -= amount;
+        send({ type: 'follow', amount: amount });
+        log(`你跟注 ${fmt(amount)}`, 'me');
+        updateStats();
+        panel.innerHTML = '';
+        setTurnBar('等待对手猜测...', false);
+    };
+    document.getElementById('foldBtn').onclick = () => {
+        // 投降罚金：用猜解方本回合叫注额
+        const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
+
+        // 胜负判定：投降回合 ≤ 宣言回合 → 猜解方赢
+        let winner, payout;
+        if (G.guessedRounds <= G.betRounds) {
+            winner = 'opp';
+            payout = G.roundBetAmount;
+            G.myMoney -= payout;
+            G.oppMoney += payout;
+            log(`你投降，且投降回合(${G.guessedRounds}) ≤ 对手宣言(${G.betRounds})，对手赢得赌回合 ${fmt(payout)}`, 'opp');
+        } else {
+            winner = 'me';
+            payout = G.roundBetAmount;
+            G.myMoney += payout;
+            G.oppMoney -= payout;
+            log(`你投降，但投降回合(${G.guessedRounds}) > 对手宣言(${G.betRounds})，你赢得赌回合 ${fmt(payout)}`, 'win');
+        }
+
+        // 支付罚金
+        G.myMoney -= penalty;
+        G.oppMoney += penalty;
+        log(`你支付投降罚金 ${fmt(penalty)}`, 'me');
+
+        send({ type: 'fold', penalty: penalty, winner: winner, roundBetPayout: payout });
+        updateStats();
+        endRound(winner);
+    };
+}
+
+// 猜解方收到对手跟注
+function handleOppFollow(amount) {
+    log(`对手跟注 ${fmt(amount)}`, 'opp');
+    setTurnBar('对手跟注，继续猜', true);
+    showGuessInput();
+}
+
+// 出题方收到对手投降（猜解方不会投降，此处理论上不触发）
+function handleOppFold(penalty, winner, roundBetPayout) {
+    log(`对手投降，罚金 ${fmt(penalty)}`, 'win');
+    G.myMoney += penalty;
+    G.oppMoney -= penalty;
+    updateStats();
+    endRound(winner);
+}
+
+// 本局结束
+function endRound(winner) {
+    G.phase = 'over';
+    document.getElementById('actionPanel').innerHTML = '';
+    setTurnBar(winner === 'me' ? '🎉 本局你赢了！' : '本局你输了', winner === 'me');
+
+    if (G.round < G.totalRounds) {
+        setTimeout(() => {
+            G.round++;
+            log(`—— 第 ${G.round} 局开始 ——`, 'win');
+            startRound();
+        }, 3000);
+    } else {
+        setTimeout(() => {
+            log(`===== 对决结束 =====`, 'win');
+            log(`你的最终资金：${fmt(G.myMoney)}`, 'win');
+            log(`对手最终资金：${fmt(G.oppMoney)}`, 'win');
+            if (G.myMoney > G.oppMoney) log('🏆 你赢得了对决！', 'win');
+            else if (G.myMoney < G.oppMoney) log('你输掉了对决', 'opp');
+            else log('平局', 'sys');
+            document.getElementById('actionPanel').innerHTML = '<button onclick="location.reload()">再来一局</button>';
+        }, 1500);
+    }
+}
+
+// ==================== 连接 ====================
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+function setupConnection(c, host) {
+    conn = c;
+    isHost = host;
+    c.on('open', () => {
+        setStatus('已连接！');
+        log('已连接！', 'win');
+        send({ type: 'ready' });
+    });
+    c.on('data', handleData);
+    c.on('close', () => { setStatus('连接已断开'); log('连接已断开', 'sys'); });
+    c.on('error', (e) => { setStatus('连接错误'); log('连接错误: ' + e, 'sys'); });
+}
+
+document.getElementById('createBtn').onclick = () => {
+    const r = document.getElementById('roomInput').value.trim();
+    if (r.length < 2) { setStatus('房间号至少 2 位'); return; }
+    roomId = r;
+    setStatus('正在创建房间...');
+    peer = new Peer('guess-game-' + roomId);
+    peer.on('open', () => {
+        setStatus('房间已创建，等待对手加入...');
+        peer.on('connection', c => { setStatus('对手已加入！'); setupConnection(c, true); });
+    });
+    peer.on('error', err => {
+        setStatus('出错：' + err.type + (err.type === 'unavailable-id' ? '（房间号被占用）' : ''));
+    });
+};
+
+document.getElementById('joinBtn').onclick = () => {
+    const r = document.getElementById('roomInput').value.trim();
+    if (r.length < 2) { setStatus('房间号至少 2 位'); return; }
+    roomId = r;
+    setStatus('正在连接...');
+    peer = new Peer();
+    peer.on('open', () => {
+        const c = peer.connect('guess-game-' + roomId);
+        setupConnection(c, false);
+    });
+    peer.on('error', err => setStatus('出错：' + err.type));
+};
+
+document.getElementById('matchBtn').onclick = () => {
+    const lobbyId = 'guess-lobby-public';
+    setStatus('正在匹配...');
+    peer = new Peer();
+    peer.on('open', () => {
+        const c = peer.connect(lobbyId);
+        let connected = false;
+        c.on('open', () => { connected = true; setStatus('匹配成功！'); setupConnection(c, false); });
+        setTimeout(() => {
+            if (!connected) {
+                c.close();
+                peer.destroy();
+                peer = new Peer(lobbyId);
+                peer.on('open', () => {
+                    setStatus('已进入匹配队列，等待对手...');
+                    peer.on('connection', cc => { setStatus('匹配成功！'); setupConnection(cc, true); });
+                });
+            }
+        }, 2000);
+    });
+};
+
+// ==================== 初始化 ====================
+updateStats();
+log('提示：一方创建房间，另一方加入即可开始', 'sys');
+</script>
+</body>
+</html>
