@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>躲开方块</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #1a1a2e;
+        font-family: "Microsoft YaHei", Arial, sans-serif;
+        color: #eee;
+        user-select: none;
+    }
+    h1 { font-size: 20px; margin-bottom: 10px; font-weight: normal; color: #8ecae6; }
+    #game {
+        background: #16213e;
+        border-radius: 12px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        cursor: none;
+        touch-action: none;
+    }
+    #tip { margin-top: 12px; font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>躲开方块 · 坚持越久越厉害</h1>
+<canvas id="game" width="400" height="600"></canvas>
+<div id="tip">移动鼠标 / 手指，或按 ← → 键控制</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let player, blocks, score, gameOver, spawnTimer, spawnInterval, frame;
+
+function reset() {
+    player = { x: W / 2, y: H - 40, r: 14, speed: 7 };
+    blocks = [];
+    score = 0;
+    gameOver = false;
+    spawnTimer = 0;
+    spawnInterval = 45;   // 每多少帧生成一个方块
+    frame = 0;
+}
+
+// 鼠标/触摸控制
+function movePlayer(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    player.x = (clientX - rect.left) * scale;
+    player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+}
+
+canvas.addEventListener('mousemove', e => { if (!gameOver) movePlayer(e.clientX); });
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!gameOver) movePlayer(e.touches[0].clientX);
+}, { passive: false });
+
+// 键盘控制
+const keys = {};
+document.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (gameOver && e.key === ' ') reset();
+});
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+function spawnBlock() {
+    const w = 30 + Math.random() * 60;
+    blocks.push({
+        x: Math.random() * (W - w),
+        y: -30,
+        w: w,
+        h: 22,
+        speed: 2 + Math.random() * 2 + score / 600
+    });
+}
+
+function update() {
+    if (gameOver) return;
+    frame++;
+
+    // 键盘移动
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        player.x = Math.max(player.r, player.x - player.speed);
+    }
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        player.x = Math.min(W - player.r, player.x + player.speed);
+    }
+
+    // 生成方块
+    spawnTimer++;
+    if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0;
+        spawnBlock();
+        // 难度慢慢提升
+        if (spawnInterval > 15) spawnInterval -= 0.5;
+    }
+
+    // 移动方块 + 碰撞检测
+    for (let i = blocks.length - 1; i >= 0; i--) {
+        const b = blocks[i];
+        b.y += b.speed;
+
+        // 方块和圆的碰撞
+        const cx = Math.max(b.x, Math.min(player.x, b.x + b.w));
+        const cy = Math.max(b.y, Math.min(player.y, b.y + b.h));
+        const dx = player.x - cx;
+        const dy = player.y - cy;
+        if (dx * dx + dy * dy < player.r * player.r) {
+            gameOver = true;
+        }
+
+        if (b.y > H) {
+            blocks.splice(i, 1);
+            score += 10;
+        }
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // 方块
+    blocks.forEach(b => {
+        ctx.fillStyle = '#e94560';
+        ctx.beginPath();
+        ctx.roundRect(b.x, b.y, b.w, b.h, 5);
+        ctx.fill();
+    });
+
+    // 玩家
+    ctx.fillStyle = gameOver ? '#888' : '#8ecae6';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 分数
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('分数: ' + score, 15, 30);
+
+    // 结束画面
+    if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#e94560';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('游戏结束', W / 2, H / 2 - 30);
+        ctx.fillStyle = '#fff';
+        ctx.font = '22px Arial';
+        ctx.fillText('得分: ' + score, W / 2, H / 2 + 15);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#8ecae6';
+        ctx.fillText('点击屏幕 或 按空格 重新开始', W / 2, H / 2 + 60);
+    }
+}
+
+canvas.addEventListener('click', () => { if (gameOver) reset(); });
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+reset();
+loop();
+</script>
+</body>
+</html>
