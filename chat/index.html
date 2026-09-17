@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supabase 聊天测试</title>
+<title>猜数字对决 · 联机版</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -16,16 +16,17 @@ body {
     align-items: center;
     padding: 16px;
 }
-h1 { font-size: 20px; color: #58a6ff; margin-bottom: 12px; font-weight: normal; }
+h1 { font-size: 22px; color: #58a6ff; margin-bottom: 12px; font-weight: normal; }
 .panel {
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 10px;
-    padding: 16px;
+    padding: 18px;
     width: 100%;
-    max-width: 480px;
-    margin-bottom: 10px;
+    max-width: 520px;
+    margin-bottom: 12px;
 }
+.panel h2 { font-size: 15px; color: #8b949e; margin-bottom: 10px; font-weight: normal; }
 input, button {
     font-family: inherit;
     font-size: 15px;
@@ -38,7 +39,8 @@ input {
     padding: 10px 12px;
     background: #0d1117;
     color: #e6edf3;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
 }
 input:focus { border-color: #58a6ff; }
 button {
@@ -47,47 +49,95 @@ button {
     color: #fff;
     cursor: pointer;
     border: none;
+    transition: opacity 0.2s;
     width: 100%;
     margin-bottom: 8px;
 }
 button:hover { opacity: 0.85; }
+button:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
 button.sec { background: #21262d; border: 1px solid #30363d; }
-#status { font-size: 13px; color: #8b949e; min-height: 18px; margin-top: 6px; }
-#chat {
+button.danger { background: #da3633; }
+#status { font-size: 13px; color: #8b949e; min-height: 18px; margin-top: 6px; text-align: center; }
+#game { display: none; width: 100%; max-width: 520px; }
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.stat {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px;
+}
+.stat .label { font-size: 12px; color: #8b949e; }
+.stat .value { font-size: 20px; font-weight: bold; margin-top: 4px; }
+.green { color: #3fb950; }
+.pink { color: #f778ba; }
+.gold { color: #d29922; }
+#log {
     background: #0d1117;
     border: 1px solid #30363d;
     border-radius: 8px;
     padding: 10px;
     height: 300px;
     overflow-y: auto;
-    font-size: 14px;
-    line-height: 1.6;
-    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 10px;
 }
-#chat .me { color: #3fb950; }
-#chat .opp { color: #f778ba; }
-#chat .sys { color: #8b949e; font-style: italic; }
-.row { display: flex; gap: 8px; }
-.row input { flex: 1; margin-bottom: 0; }
-.row button { width: auto; margin-bottom: 0; }
+#log .me { color: #3fb950; }
+#log .opp { color: #f778ba; }
+#log .sys { color: #8b949e; font-style: italic; }
+#log .win { color: #d29922; font-weight: bold; }
+.turn {
+    text-align: center;
+    font-size: 14px;
+    padding: 8px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.turn.active { border-color: #3fb950; color: #3fb950; }
+.turn.wait { color: #8b949e; }
+#history { font-size: 12px; color: #8b949e; margin-top: 8px; }
+#history div { padding: 2px 0; }
 </style>
 </head>
 <body>
 
-<h1>💬 Supabase 聊天测试</h1>
+<h1>🎯 猜数字对决 · 联机版</h1>
 
-<div class="panel">
-    <input id="roomInput" placeholder="房间号（双方输入相同）">
+<div id="menu" class="panel">
+    <h2>房间号（双方输入相同）</h2>
+    <input id="roomInput" placeholder="输入房间号，如 8888" maxlength="10">
     <button id="joinBtn">进入房间</button>
-    <div id="status">输入房间号，双方都点「进入房间」</div>
+    <div id="status">初始资金：200,000</div>
 </div>
 
-<div class="panel" id="chatPanel" style="display:none">
-    <div id="chat"></div>
-    <div class="row">
-        <input id="msgInput" placeholder="输入消息..." maxlength="200">
-        <button id="sendBtn">发送</button>
+<div id="game">
+    <div class="stats">
+        <div class="stat">
+            <div class="label">我 <span class="green">●</span></div>
+            <div class="value green" id="myMoney">200,000</div>
+            <div class="label" style="margin-top:6px">身份：<span id="myRole">-</span></div>
+        </div>
+        <div class="stat">
+            <div class="label">对手 <span class="pink">●</span></div>
+            <div class="value pink" id="oppMoney">200,000</div>
+            <div class="label" style="margin-top:6px">身份：<span id="oppRole">-</span></div>
+        </div>
     </div>
+
+    <div class="turn wait" id="turnBar">等待连接...</div>
+
+    <div id="log"></div>
+
+    <div class="panel" id="actionPanel"></div>
+
+    <div id="history"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -95,21 +145,43 @@ button.sec { background: #21262d; border: 1px solid #30363d; }
 // ==================== Supabase 配置 ====================
 const SUPABASE_URL = 'https://jzocedfhemyjlulcflrt.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EncbDbv4JJwcffBu3xka-A_oMcP9757';
-
-// 注意：全局已经有一个 supabase 对象（库自带的），这里用 sb 避免重名
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ==================== 常量 ====================
+const START_MONEY = 200000;
+const DIGITS = 6;
+
+// ==================== 状态 ====================
 let channel = null;
-let myName = '';
-let roomId = '';
+let isHost = false;        // 我是不是房主
+let joined = false;        // 是否已进入游戏
+let oppOnline = false;     // 对手是否在线
+
+const G = {
+    myMoney: START_MONEY,
+    oppMoney: START_MONEY,
+    myStartMoney: START_MONEY,
+    oppStartMoney: START_MONEY,
+    round: 1,              // 第几局（1-4）
+    totalRounds: 4,
+    myTurn: null,          // true=我猜, false=我出题
+    mySecret: '',
+    oppSecret: '',
+    myGuessHistory: [],
+    oppGuessHistory: [],
+    guessedRounds: 0,
+    betRounds: 0,
+    roundBetAmount: 0,
+    currentTurnBet: 0,
+    overRoundBetPaid: false,  // 超过宣言回合后，是否已赔过赌回合
+    phase: 'idle',
+};
 
 // ==================== 工具 ====================
-function setStatus(msg) {
-    document.getElementById('status').textContent = msg;
-}
+function fmt(n) { return Math.round(n).toLocaleString('zh-CN'); }
 
 function log(msg, cls = 'sys') {
-    const el = document.getElementById('chat');
+    const el = document.getElementById('log');
     const div = document.createElement('div');
     div.className = cls;
     div.textContent = msg;
@@ -117,65 +189,510 @@ function log(msg, cls = 'sys') {
     el.scrollTop = el.scrollHeight;
 }
 
-// ==================== 进入房间 ====================
-document.getElementById('joinBtn').onclick = () => {
-    roomId = document.getElementById('roomInput').value.trim();
-    if (roomId.length < 2) { setStatus('房间号至少 2 位'); return; }
+function updateStats() {
+    document.getElementById('myMoney').textContent = fmt(G.myMoney);
+    document.getElementById('oppMoney').textContent = fmt(G.oppMoney);
+    let myRole = '-', oppRole = '-';
+    if (G.myTurn === true) { myRole = '猜解方'; oppRole = '出题方'; }
+    else if (G.myTurn === false) { myRole = '出题方'; oppRole = '猜解方'; }
+    document.getElementById('myRole').textContent = myRole;
+    document.getElementById('oppRole').textContent = oppRole;
+}
 
-    setStatus('正在连接 Supabase...');
+function setTurnBar(text, active) {
+    const bar = document.getElementById('turnBar');
+    bar.textContent = text;
+    bar.className = 'turn ' + (active ? 'active' : 'wait');
+}
 
-    channel = sb.channel('chat-' + roomId, {
-        config: {
-            broadcast: { self: false }
+function judge(secret, guess) {
+    let A = 0, B = 0;
+    const s = secret.split('');
+    const g = guess.split('');
+    const sUsed = new Array(DIGITS).fill(false);
+    const gUsed = new Array(DIGITS).fill(false);
+    for (let i = 0; i < DIGITS; i++) {
+        if (s[i] === g[i]) { A++; sUsed[i] = true; gUsed[i] = true; }
+    }
+    for (let i = 0; i < DIGITS; i++) {
+        if (sUsed[i]) continue;
+        for (let j = 0; j < DIGITS; j++) {
+            if (gUsed[j]) continue;
+            if (s[i] === g[j]) { B++; sUsed[i] = true; gUsed[j] = true; break; }
         }
+    }
+    return `${A}A${B}B`;
+}
+
+// ==================== 投降罚金 ====================
+function calcPenalty(oppStartMoney, completedRounds, currentTurnBet) {
+    let coeff, base;
+    const r = completedRounds;
+    if (r <= 10) {
+        coeff = (50 + r) / 100;
+        base = oppStartMoney * 0.05;
+    } else if (r <= 20) {
+        coeff = (50 + r) / 100;
+        base = oppStartMoney * 0.10;
+    } else if (r <= 30) {
+        coeff = (50 - r) / 100;
+        base = oppStartMoney * 0.20;
+    } else {
+        coeff = (50 - r) / 100;
+        base = 0;
+    }
+    if (coeff < 0) coeff = 0;
+    const penalty = oppStartMoney * 0.10 * coeff + currentTurnBet * 0.10 + base;
+    return Math.max(0, Math.round(penalty));
+}
+
+// ==================== 网络发送 ====================
+function send(event, payload) {
+    if (!channel) return;
+    channel.send({
+        type: 'broadcast',
+        event: event,
+        payload: payload
+    });
+}
+
+// ==================== 接收处理 ====================
+function handleBroadcast(event, payload) {
+    switch (event) {
+        case 'hello':
+            oppOnline = true;
+            log('对手已进入房间', 'sys');
+            send('hello-back', {});
+            break;
+        case 'hello-back':
+            oppOnline = true;
+            log('对手已确认在线', 'sys');
+            if (!joined) startGame();
+            break;
+        case 'start':
+            // 对手通知开始
+            if (!joined) {
+                isHost = false;
+                joined = true;
+                document.getElementById('menu').style.display = 'none';
+                document.getElementById('game').style.display = 'block';
+                startRound();
+            }
+            break;
+        case 'secret':
+            G.oppSecret = payload.secret;
+            break;
+        case 'betRounds':
+            G.betRounds = payload.rounds;
+            log(`对手宣言：${payload.rounds} 回合内猜出`, 'opp');
+            askBetRoundsResponse(payload.rounds);
+            break;
+        case 'betRoundsAmount':
+            G.roundBetAmount = payload.amount;
+            log(`对手叫注（赌回合）：${fmt(payload.amount)}`, 'opp');
+            startMyTurnRound();
+            break;
+        case 'guess':
+            handleOppGuess(payload.guess);
+            break;
+        case 'guessResult':
+            handleGuessResult(payload.result);
+            break;
+        case 'roundBet':
+            askFollowOrFold(payload.amount);
+            break;
+        case 'follow':
+            log(`对手跟注 ${fmt(payload.amount)}`, 'opp');
+            updateStats();
+            showMyGuessInput();
+            break;
+        case 'fold':
+            handleOppFold(payload);
+            break;
+        case 'solved':
+            handleOppSolved(payload);
+            break;
+        case 'endRound':
+            handleEndRound(payload);
+            break;
+    }
+}
+
+// ==================== 游戏开始 ====================
+function startGame() {
+    joined = true;
+    document.getElementById('menu').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+    log('双方就绪，游戏开始！', 'win');
+    send('start', {});
+    startRound();
+}
+
+// ==================== 每局开始 ====================
+function startRound() {
+    G.guessedRounds = 0;
+    G.myGuessHistory = [];
+    G.oppGuessHistory = [];
+    G.myStartMoney = G.myMoney;
+    G.oppStartMoney = G.oppMoney;
+    G.betRounds = 0;
+    G.roundBetAmount = 0;
+    G.overRoundBetPaid = false;
+    G.currentTurnBet = 0;
+
+    // 4 局：房主 1猜 2出 3出 4猜
+    // 我猜的局：房主第1、4局；加入方第2、3局
+    const hostGuesses = (G.round === 1 || G.round === 4);
+    G.myTurn = isHost ? hostGuesses : !hostGuesses;
+
+    updateStats();
+    document.getElementById('history').innerHTML = '';
+
+    if (G.myTurn) {
+        log(`【第 ${G.round} 局】你是猜解方`, 'me');
+        setTurnBar('你是猜解方，宣言你几回合内能猜出', true);
+        showBetRoundsInput();
+    } else {
+        log(`【第 ${G.round} 局】你是出题方`, 'me');
+        setTurnBar('请先输入你出的题目（6 位数字）', true);
+        showSecretInput();
+    }
+}
+
+// 出题方：输入题目
+function showSecretInput() {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>请输入你出的题目（6 位数字）</h2>
+        <input id="secretInput" maxlength="6" placeholder="例如 123456" style="letter-spacing:6px;text-align:center;font-size:20px">
+        <button id="secretBtn">确定</button>
+    `;
+    document.getElementById('secretBtn').onclick = () => {
+        const s = document.getElementById('secretInput').value.trim();
+        if (!/^\d{6}$/.test(s)) { log('必须是 6 位数字', 'sys'); return; }
+        G.mySecret = s;
+        send('secret', { secret: s });
+        log(`你出题：${s}`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待对手宣言...', false);
+    };
+}
+
+// 猜解方：宣言回合数
+function showBetRoundsInput() {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>宣言：你几回合内能猜出答案？</h2>
+        <input id="roundsInput" type="number" min="1" max="99" placeholder="例如 10" style="letter-spacing:0">
+        <button id="declareBtn">宣言</button>
+    `;
+    document.getElementById('declareBtn').onclick = () => {
+        const v = parseInt(document.getElementById('roundsInput').value);
+        if (!v || v < 1) { log('请输入有效回合数', 'sys'); return; }
+        G.betRounds = v;
+        send('betRounds', { rounds: v });
+        log(`你宣言：${v} 回合内猜出`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待对手叫赌回合注...', false);
+    };
+}
+
+// 出题方：收到宣言后叫注
+function askBetRoundsResponse(rounds) {
+    const minBet = Math.floor(G.oppStartMoney * 0.01);
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>对手宣言 ${rounds} 回合内猜出</h2>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px">最低叫注：${fmt(minBet)}</p>
+        <input id="betInput" type="number" min="${minBet}" placeholder="赌回合叫注金额" style="letter-spacing:0">
+        <button id="betBtn">叫注</button>
+    `;
+    document.getElementById('betBtn').onclick = () => {
+        let v = parseInt(document.getElementById('betInput').value);
+        if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
+        if (v > G.myMoney) { log('你的资金不足', 'sys'); return; }
+        G.roundBetAmount = v;
+        send('betRoundsAmount', { amount: v });
+        log(`你叫注（赌回合）：${fmt(v)}`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待对手猜测...', false);
+    };
+}
+
+// ==================== 我猜解回合 ====================
+function startMyTurnRound() {
+    const minBet = Math.floor(G.myMoney * 0.01);
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>第 ${G.guessedRounds + 1} 回合 · 你叫注</h2>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px">最低叫注：${fmt(minBet)}</p>
+        <input id="betInput" type="number" min="${minBet}" placeholder="叫注金额" style="letter-spacing:0">
+        <button id="betBtn">叫注</button>
+    `;
+    setTurnBar(`第 ${G.guessedRounds + 1} 回合：请叫注`, true);
+    document.getElementById('betBtn').onclick = () => {
+        let v = parseInt(document.getElementById('betInput').value);
+        if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
+        if (v > G.myMoney) { log('资金不足', 'sys'); return; }
+        G.currentTurnBet = v;
+        G.myMoney -= v;
+        send('roundBet', { amount: v });
+        log(`你叫注：${fmt(v)}（已扣除）`, 'me');
+        updateStats();
+        panel.innerHTML = '';
+        setTurnBar('等待对手跟注或投降...', false);
+    };
+}
+
+// 对手（出题方）跟注
+function handleOppFollow(amount) {
+    log(`对手跟注 ${fmt(amount)}`, 'opp');
+    updateStats();
+    showMyGuessInput();
+}
+
+// 我猜测
+function showMyGuessInput() {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>第 ${G.guessedRounds + 1} 回合 · 输入你的猜测</h2>
+        <input id="guessInput" maxlength="6" placeholder="6 位数字" style="letter-spacing:6px;text-align:center;font-size:20px">
+        <button id="guessBtn">提交猜测</button>
+    `;
+    setTurnBar('输入你的猜测', true);
+    document.getElementById('guessBtn').onclick = () => {
+        const g = document.getElementById('guessInput').value.trim();
+        if (!/^\d{6}$/.test(g)) { log('必须是 6 位数字', 'sys'); return; }
+        G.myGuessHistory.push(g);
+        send('guess', { guess: g });
+        log(`你猜：${g}`, 'me');
+        panel.innerHTML = '';
+        setTurnBar('等待反馈...', false);
+    };
+}
+
+// 出题方收到对手猜测
+function handleOppGuess(guess) {
+    const result = judge(G.mySecret, guess);
+    log(`对手猜：${guess} → ${result}`, 'opp');
+    G.oppGuessHistory.push({ guess, result });
+    send('guessResult', { result: result });
+    setTurnBar('等待对手叫注...', false);
+    document.getElementById('actionPanel').innerHTML = '';
+}
+
+// 我（猜解方）收到反馈
+function handleGuessResult(result) {
+    log(`反馈：${result}`, 'opp');
+    const last = G.myGuessHistory[G.myGuessHistory.length - 1];
+    const div = document.createElement('div');
+    div.textContent = `${last} → ${result}`;
+    document.getElementById('history').appendChild(div);
+
+    G.guessedRounds++;
+
+    if (result === '6A0B') {
+        log('🎉 你猜出了答案！', 'win');
+        // 桌上 2*stake 全归我
+        const stake = G.currentTurnBet;
+        G.myMoney += stake * 2;
+        updateStats();
+        send('solved', { winner: 'me', stake: stake });
+        endRound('me');
+        return;
+    }
+
+    // 猜错：桌上 2*stake 归对手
+    const stake = G.currentTurnBet;
+    G.oppMoney += stake * 2;
+    log(`❌ 猜错，本回合赌注 ${fmt(stake * 2)} 归对手`, 'opp');
+    updateStats();
+
+    // 检查是否超过宣言回合数
+    if (G.guessedRounds > G.betRounds && !G.overRoundBetPaid) {
+        G.overRoundBetPaid = true;
+        const payout = G.roundBetAmount;
+        G.myMoney -= payout;
+        G.oppMoney += payout;
+        log(`已超过宣言回合(${G.betRounds})，赔付赌回合注 ${fmt(payout)}`, 'opp');
+        updateStats();
+        send('overBetPaid', { payout: payout });
+    }
+
+    // 继续下一回合
+    setTimeout(startMyTurnRound, 800);
+}
+
+// ==================== 对手猜解回合 ====================
+// 出题方收到逐回合叫注
+function askFollowOrFold(amount) {
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `
+        <h2>对手叫注 ${fmt(amount)}</h2>
+        <button id="followBtn">跟注（继续）</button>
+        <button id="foldBtn" class="danger">投降</button>
+    `;
+    document.getElementById('followBtn').onclick = () => {
+        if (G.myMoney < amount) { log('资金不足，只能投降', 'sys'); return; }
+        G.myMoney -= amount;
+        send('follow', { amount: amount });
+        log(`你跟注 ${fmt(amount)}`, 'me');
+        updateStats();
+        panel.innerHTML = '';
+        setTurnBar('等待对手猜测...', false);
+    };
+    document.getElementById('foldBtn').onclick = () => {
+        const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
+        let winner, payout;
+        if (G.guessedRounds <= G.betRounds) {
+            winner = 'opp';
+            payout = G.roundBetAmount;
+            G.myMoney -= payout;
+            G.oppMoney += payout;
+            log(`你投降，对手赢得赌回合 ${fmt(payout)}`, 'opp');
+        } else {
+            winner = 'me';
+            payout = G.roundBetAmount;
+            G.myMoney += payout;
+            G.oppMoney -= payout;
+            log(`你投降，但你赢得赌回合 ${fmt(payout)}`, 'win');
+        }
+        G.myMoney -= penalty;
+        G.oppMoney += penalty;
+        log(`你支付投降罚金 ${fmt(penalty)}`, 'me');
+        send('fold', { penalty, winner, payout });
+        updateStats();
+        endRound(winner);
+    };
+}
+
+// 猜解方收到对手投降
+function handleOppFold(payload) {
+    log(`对手投降，罚金 ${fmt(payload.penalty)}`, 'win');
+    G.myMoney += payload.penalty;
+    G.oppMoney -= payload.penalty;
+    updateStats();
+    endRound(payload.winner);
+}
+
+// 猜解方猜中，通知出题方
+function handleOppSolved(payload) {
+    // 出题方：对手猜中
+    log('对手猜出了答案', 'opp');
+    // 我在 handleOppGuess 里已经处理了，这里不用再扣
+}
+
+// ==================== 局结束 ====================
+function endRound(winner) {
+    G.phase = 'over';
+    document.getElementById('actionPanel').innerHTML = '';
+    setTurnBar(winner === 'me' ? '🎉 本局你赢了！' : '本局你输了', winner === 'me');
+
+    // 检查破产
+    if (G.myMoney <= 0 || G.oppMoney <= 0) {
+        setTimeout(() => {
+            if (G.myMoney <= 0) {
+                log('💀 你破产了，游戏结束', 'opp');
+            } else {
+                log('🏆 对手破产，你赢了！', 'win');
+            }
+            document.getElementById('actionPanel').innerHTML = '<button onclick="location.reload()">再来一局</button>';
+        }, 1500);
+        return;
+    }
+
+    if (G.round < G.totalRounds) {
+        setTimeout(() => {
+            G.round++;
+            log(`—— 第 ${G.round} 局开始 ——`, 'win');
+            startRound();
+        }, 3000);
+    } else {
+        // 4 局结束，比钱
+        setTimeout(() => {
+            log(`===== 对决结束 =====`, 'win');
+            log(`你的最终资金：${fmt(G.myMoney)}`, 'win');
+            log(`对手最终资金：${fmt(G.oppMoney)}`, 'win');
+            if (G.myMoney > G.oppMoney) log('🏆 你赢得了对决！', 'win');
+            else if (G.myMoney < G.oppMoney) log('你输掉了对决', 'opp');
+            else log('平局', 'sys');
+            document.getElementById('actionPanel').innerHTML = '<button onclick="location.reload()">再来一局</button>';
+        }, 1500);
+    }
+}
+
+function handleEndRound(payload) {
+    // 简化：不额外处理，各自在 endRound 里结算
+}
+
+// ==================== 连接 ====================
+document.getElementById('joinBtn').onclick = () => {
+    const r = document.getElementById('roomInput').value.trim();
+    if (r.length < 2) { setStatus('房间号至少 2 位'); return; }
+    setStatus('正在连接...');
+
+    channel = sb.channel('guess-' + r, {
+        config: { broadcast: { self: false } }
     });
 
-    channel.on('broadcast', { event: 'msg' }, (payload) => {
-        log(`${payload.payload.from}: ${payload.payload.text}`, 'opp');
-    });
-
-    channel.on('broadcast', { event: 'hello' }, (payload) => {
-        log(`对方已进入房间`, 'sys');
+    channel.on('broadcast', { event: '*' }, (payload) => {
+        handleBroadcast(payload.event, payload.payload);
     });
 
     channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-            setStatus('已进入房间：' + roomId);
-            document.getElementById('chatPanel').style.display = 'block';
-            myName = '我';
-            log(`已进入房间 ${roomId}，等待对方...`, 'sys');
-
-            channel.send({
-                type: 'broadcast',
-                event: 'hello',
-                payload: { name: myName }
-            });
+            setStatus('已进入房间：' + r);
+            log(`已进入房间 ${r}，等待对手...`, 'sys');
+            // 发送 hello，谁先发谁就是房主（第一个进入的人）
+            send('hello', {});
         } else {
             setStatus('连接状态：' + status);
         }
     });
 };
 
-// ==================== 发送消息 ====================
-document.getElementById('sendBtn').onclick = sendMsg;
-document.getElementById('msgInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMsg();
-});
+// 谁先进入谁是房主
+let helloReceived = false;
+// 在 handleBroadcast 的 hello 里，如果我先收到 hello，说明我不是第一个
+// 但上面的 handleBroadcast 里已经处理了 hello：收到就发 hello-back
 
-function sendMsg() {
-    const input = document.getElementById('msgInput');
-    const text = input.value.trim();
-    if (!text || !channel) return;
+// 简化房主判断：先发 hello 的是房主
+// 通过修改 handleBroadcast 实现
+const originalHandleBroadcast = handleBroadcast;
+handleBroadcast = function(event, payload) {
+    if (event === 'hello') {
+        oppOnline = true;
+        log('对手已进入房间', 'sys');
+        send('hello-back', {});
+        if (!joined) {
+            // 我先收到 hello，说明我是先进入的（房主）
+            isHost = true;
+            joined = true;
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            log('你是房主', 'sys');
+            startRound();
+        }
+        return;
+    }
+    if (event === 'hello-back') {
+        oppOnline = true;
+        log('对手已确认在线', 'sys');
+        if (!joined) {
+            // 我先发 hello，收到 hello-back，说明我是房主
+            isHost = true;
+            joined = true;
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            log('你是房主', 'sys');
+            startRound();
+        }
+        return;
+    }
+    originalHandleBroadcast(event, payload);
+};
 
-    channel.send({
-        type: 'broadcast',
-        event: 'msg',
-        payload: { from: myName, text: text }
-    });
-
-    log(`${myName}: ${text}`, 'me');
-    input.value = '';
-}
+log('输入房间号，双方进入同一个房间即可开始', 'sys');
 </script>
 </body>
 </html>
