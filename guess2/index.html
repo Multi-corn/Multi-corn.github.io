@@ -104,6 +104,12 @@ button.danger { background: #da3633; }
 .turn.wait { color: #8b949e; }
 #history { font-size: 12px; color: #8b949e; margin-top: 8px; }
 #history div { padding: 2px 0; }
+#dice {
+    font-size: 60px;
+    text-align: center;
+    margin: 20px 0;
+    letter-spacing: 10px;
+}
 </style>
 </head>
 <body>
@@ -115,6 +121,12 @@ button.danger { background: #da3633; }
     <input id="roomInput" placeholder="输入房间号，如 8888" maxlength="10">
     <button id="joinBtn">进入房间</button>
     <div id="status">初始资金：200,000</div>
+</div>
+
+<div id="dicePanel" class="panel" style="display:none">
+    <h2>🎲 扔骰子决定谁先猜</h2>
+    <div id="dice">?</div>
+    <div id="diceStatus" style="font-size:13px;color:#8b949e;text-align:center"></div>
 </div>
 
 <div id="game">
@@ -153,10 +165,9 @@ const DIGITS = 6;
 
 // ==================== 状态 ====================
 let channel = null;
-let isHost = false;
 let joined = false;
-let oppOnline = false;
-let startSent = false;
+let amFirstGuesser = false;    // 我是不是先猜方（骰子大的一方）
+let diceDone = false;          // 骰子环节是否结束
 
 const G = {
     myMoney: START_MONEY,
@@ -165,7 +176,7 @@ const G = {
     oppStartMoney: START_MONEY,
     round: 1,
     totalRounds: 4,
-    myTurn: null,
+    myTurn: null,          // true=我猜, false=我出题
     mySecret: '',
     oppSecret: '',
     myGuessHistory: [],
@@ -175,7 +186,8 @@ const G = {
     roundBetAmount: 0,
     currentTurnBet: 0,
     overRoundBetPaid: false,
-    phase: 'idle',
+    mySecretSent: false,   // 本局我是否已发送题目
+    oppSecretReceived: false, // 本局我是否已收到对方题目
 };
 
 // ==================== 工具 ====================
@@ -265,33 +277,21 @@ function send(event, payload) {
 function handleBroadcast(event, payload) {
     switch (event) {
         case 'hello':
-            oppOnline = true;
             log('对手已进入房间', 'sys');
             send('hello-back', {});
-            // 谁先收到 hello，谁就先进入的（房主）
-            if (!isHost && !joined) {
-                isHost = true;
-                enterGame();
-            }
             break;
         case 'hello-back':
-            oppOnline = true;
-            log('对手已确认在线', 'sys');
-            // 收到 hello-back，说明对方是先进入的（房主），我是加入方
-            if (!joined) {
-                isHost = false;
-                enterGame();
-            }
+            log('双方已就绪，开始扔骰子', 'win');
+            if (!diceDone) startDice();
             break;
-        case 'start':
-            if (!joined) {
-                isHost = false;
-                enterGame();
-                startRound();
-            }
+        case 'dice':
+            handleOppDice(payload.value);
             break;
         case 'secret':
             G.oppSecret = payload.secret;
+            G.oppSecretReceived = true;
+            log('已收到对方的题目', 'sys');
+            onOppSecretReceived();
             break;
         case 'betRounds':
             G.betRounds = payload.rounds;
@@ -329,21 +329,63 @@ function handleBroadcast(event, payload) {
     }
 }
 
-function enterGame() {
-    if (joined) return;
-    joined = true;
+// ==================== 骰子环节 ====================
+let myDice = 0;
+let oppDice = 0;
+
+function startDice() {
+    if (diceDone) return;
+    diceDone = true;
     document.getElementById('menu').style.display = 'none';
-    document.getElementById('game').style.display = 'block';
-    log(isHost ? '你是房主' : '你是加入方', 'sys');
-    log('双方就绪，游戏开始！', 'win');
-    // 房主负责发 start
-    if (isHost && !startSent) {
-        startSent = true;
+    document.getElementById('dicePanel').style.display = 'block';
+
+    myDice = Math.floor(Math.random() * 6) + 1;
+    document.getElementById('dice').textContent = '🎲';
+    document.getElementById('diceStatus').textContent = '正在扔...';
+
+    send('dice', { value: myDice });
+
+    setTimeout(() => {
+        document.getElementById('dice').textContent = myDice;
+        document.getElementById('diceStatus').textContent = '你的点数：' + myDice + '，等待对方...';
+        checkDice();
+    }, 800);
+}
+
+function handleOppDice(value) {
+    oppDice = value;
+    document.getElementById('diceStatus').textContent = '对方点数：' + value;
+    checkDice();
+}
+
+let diceResolved = false;
+function checkDice() {
+    if (diceResolved) return;
+    if (myDice === 0 || oppDice === 0) return;
+
+    if (myDice === oppDice) {
+        // 平局，重扔
+        document.getElementById('diceStatus').textContent = `平局（${myDice}:${oppDice}），重新扔...`;
         setTimeout(() => {
-            send('start', {});
-            startRound();
-        }, 500);
+            myDice = 0;
+            oppDice = 0;
+            startDice();
+        }, 1500);
+        return;
     }
+
+    diceResolved = true;
+    amFirstGuesser = myDice > oppDice;
+    document.getElementById('diceStatus').textContent = amFirstGuesser
+        ? `你 ${myDice} : ${oppDice} 对手，你先猜！`
+        : `你 ${myDice} : ${oppDice} 对手，对手先猜`;
+
+    setTimeout(() => {
+        document.getElementById('dicePanel').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        log(amFirstGuesser ? '你骰子更大，你先猜' : '对手骰子更大，对手先猜', 'win');
+        startRound();
+    }, 2000);
 }
 
 // ==================== 每局开始 ====================
@@ -357,18 +399,26 @@ function startRound() {
     G.roundBetAmount = 0;
     G.overRoundBetPaid = false;
     G.currentTurnBet = 0;
+    G.mySecretSent = false;
+    G.oppSecretReceived = false;
+    G.mySecret = '';
+    G.oppSecret = '';
 
-    // 房主猜第 1、4 局；加入方猜第 2、3 局
-    const hostGuesses = (G.round === 1 || G.round === 4);
-    G.myTurn = isHost ? hostGuesses : !hostGuesses;
+    // 先猜方：第 1、4 局猜；第 2、3 局出题
+    const firstGuesserGuesses = (G.round === 1 || G.round === 4);
+    G.myTurn = amFirstGuesser ? firstGuesserGuesses : !firstGuesserGuesses;
 
     updateStats();
     document.getElementById('history').innerHTML = '';
 
     if (G.myTurn) {
         log(`【第 ${G.round} 局】你是猜解方`, 'me');
-        setTurnBar('你是猜解方，宣言你几回合内能猜出', true);
-        showBetRoundsInput();
+        setTurnBar('等待对方出题...', false);
+        document.getElementById('actionPanel').innerHTML = '<p style="font-size:13px;color:#8b949e;text-align:center">等待对方输入题目...</p>';
+        // 如果对方题目已经收到了（理论上不会），直接开始
+        if (G.oppSecretReceived) {
+            showBetRoundsInput();
+        }
     } else {
         log(`【第 ${G.round} 局】你是出题方`, 'me');
         setTurnBar('请先输入你出的题目（6 位数字）', true);
@@ -381,17 +431,26 @@ function showSecretInput() {
     panel.innerHTML = `
         <h2>请输入你出的题目（6 位数字）</h2>
         <input id="secretInput" maxlength="6" placeholder="例如 123456" style="letter-spacing:6px;text-align:center;font-size:20px">
-        <button id="secretBtn">确定</button>
+        <button id="secretBtn">发送题目</button>
     `;
     document.getElementById('secretBtn').onclick = () => {
         const s = document.getElementById('secretInput').value.trim();
         if (!/^\d{6}$/.test(s)) { log('必须是 6 位数字', 'sys'); return; }
         G.mySecret = s;
+        G.mySecretSent = true;
         send('secret', { secret: s });
-        log(`你出题：${s}`, 'me');
-        panel.innerHTML = '';
-        setTurnBar('等待对手宣言...', false);
+        log(`你出题：${s}（已发送）`, 'me');
+        panel.innerHTML = '<p style="font-size:13px;color:#8b949e;text-align:center">题目已发送，等待对方宣言...</p>';
+        setTurnBar('等待对方宣言...', false);
     };
+}
+
+// 猜解方收到题目后
+function onOppSecretReceived() {
+    if (G.myTurn) {
+        // 我是猜解方，开始宣言
+        showBetRoundsInput();
+    }
 }
 
 function showBetRoundsInput() {
@@ -401,6 +460,7 @@ function showBetRoundsInput() {
         <input id="roundsInput" type="number" min="1" max="99" placeholder="例如 10" style="letter-spacing:0">
         <button id="declareBtn">宣言</button>
     `;
+    setTurnBar('你是猜解方，宣言你几回合内能猜出', true);
     document.getElementById('declareBtn').onclick = () => {
         const v = parseInt(document.getElementById('roundsInput').value);
         if (!v || v < 1) { log('请输入有效回合数', 'sys'); return; }
@@ -408,7 +468,7 @@ function showBetRoundsInput() {
         send('betRounds', { rounds: v });
         log(`你宣言：${v} 回合内猜出`, 'me');
         panel.innerHTML = '';
-        setTurnBar('等待对手叫赌回合注...', false);
+        setTurnBar('等待对方叫赌回合注...', false);
     };
 }
 
@@ -580,7 +640,6 @@ function handleOppFold(payload) {
 
 // ==================== 局结束 ====================
 function endRound(winner) {
-    G.phase = 'over';
     document.getElementById('actionPanel').innerHTML = '';
     setTurnBar(winner === 'me' ? '🎉 本局你赢了！' : '本局你输了', winner === 'me');
 
