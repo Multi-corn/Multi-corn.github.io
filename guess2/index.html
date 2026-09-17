@@ -153,18 +153,19 @@ const DIGITS = 6;
 
 // ==================== 状态 ====================
 let channel = null;
-let isHost = false;        // 我是不是房主
-let joined = false;        // 是否已进入游戏
-let oppOnline = false;     // 对手是否在线
+let isHost = false;
+let joined = false;
+let oppOnline = false;
+let startSent = false;
 
 const G = {
     myMoney: START_MONEY,
     oppMoney: START_MONEY,
     myStartMoney: START_MONEY,
     oppStartMoney: START_MONEY,
-    round: 1,              // 第几局（1-4）
+    round: 1,
     totalRounds: 4,
-    myTurn: null,          // true=我猜, false=我出题
+    myTurn: null,
     mySecret: '',
     oppSecret: '',
     myGuessHistory: [],
@@ -173,11 +174,16 @@ const G = {
     betRounds: 0,
     roundBetAmount: 0,
     currentTurnBet: 0,
-    overRoundBetPaid: false,  // 超过宣言回合后，是否已赔过赌回合
+    overRoundBetPaid: false,
     phase: 'idle',
 };
 
 // ==================== 工具 ====================
+function setStatus(msg) {
+    const el = document.getElementById('status');
+    if (el) el.textContent = msg;
+}
+
 function fmt(n) { return Math.round(n).toLocaleString('zh-CN'); }
 
 function log(msg, cls = 'sys') {
@@ -246,7 +252,7 @@ function calcPenalty(oppStartMoney, completedRounds, currentTurnBet) {
     return Math.max(0, Math.round(penalty));
 }
 
-// ==================== 网络发送 ====================
+// ==================== 网络 ====================
 function send(event, payload) {
     if (!channel) return;
     channel.send({
@@ -256,26 +262,31 @@ function send(event, payload) {
     });
 }
 
-// ==================== 接收处理 ====================
 function handleBroadcast(event, payload) {
     switch (event) {
         case 'hello':
             oppOnline = true;
             log('对手已进入房间', 'sys');
             send('hello-back', {});
+            // 谁先收到 hello，谁就先进入的（房主）
+            if (!isHost && !joined) {
+                isHost = true;
+                enterGame();
+            }
             break;
         case 'hello-back':
             oppOnline = true;
             log('对手已确认在线', 'sys');
-            if (!joined) startGame();
-            break;
-        case 'start':
-            // 对手通知开始
+            // 收到 hello-back，说明对方是先进入的（房主），我是加入方
             if (!joined) {
                 isHost = false;
-                joined = true;
-                document.getElementById('menu').style.display = 'none';
-                document.getElementById('game').style.display = 'block';
+                enterGame();
+            }
+            break;
+        case 'start':
+            if (!joined) {
+                isHost = false;
+                enterGame();
                 startRound();
             }
             break;
@@ -309,23 +320,30 @@ function handleBroadcast(event, payload) {
         case 'fold':
             handleOppFold(payload);
             break;
-        case 'solved':
-            handleOppSolved(payload);
-            break;
-        case 'endRound':
-            handleEndRound(payload);
+        case 'overBetPaid':
+            log(`对手超过宣言回合，赔付赌回合注 ${fmt(payload.payout)}`, 'win');
+            G.myMoney += payload.payout;
+            G.oppMoney -= payload.payout;
+            updateStats();
             break;
     }
 }
 
-// ==================== 游戏开始 ====================
-function startGame() {
+function enterGame() {
+    if (joined) return;
     joined = true;
     document.getElementById('menu').style.display = 'none';
     document.getElementById('game').style.display = 'block';
+    log(isHost ? '你是房主' : '你是加入方', 'sys');
     log('双方就绪，游戏开始！', 'win');
-    send('start', {});
-    startRound();
+    // 房主负责发 start
+    if (isHost && !startSent) {
+        startSent = true;
+        setTimeout(() => {
+            send('start', {});
+            startRound();
+        }, 500);
+    }
 }
 
 // ==================== 每局开始 ====================
@@ -340,8 +358,7 @@ function startRound() {
     G.overRoundBetPaid = false;
     G.currentTurnBet = 0;
 
-    // 4 局：房主 1猜 2出 3出 4猜
-    // 我猜的局：房主第1、4局；加入方第2、3局
+    // 房主猜第 1、4 局；加入方猜第 2、3 局
     const hostGuesses = (G.round === 1 || G.round === 4);
     G.myTurn = isHost ? hostGuesses : !hostGuesses;
 
@@ -359,7 +376,6 @@ function startRound() {
     }
 }
 
-// 出题方：输入题目
 function showSecretInput() {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
@@ -378,7 +394,6 @@ function showSecretInput() {
     };
 }
 
-// 猜解方：宣言回合数
 function showBetRoundsInput() {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
@@ -397,7 +412,6 @@ function showBetRoundsInput() {
     };
 }
 
-// 出题方：收到宣言后叫注
 function askBetRoundsResponse(rounds) {
     const minBet = Math.floor(G.oppStartMoney * 0.01);
     const panel = document.getElementById('actionPanel');
@@ -419,7 +433,7 @@ function askBetRoundsResponse(rounds) {
     };
 }
 
-// ==================== 我猜解回合 ====================
+// ==================== 我猜解 ====================
 function startMyTurnRound() {
     const minBet = Math.floor(G.myMoney * 0.01);
     const panel = document.getElementById('actionPanel');
@@ -444,14 +458,12 @@ function startMyTurnRound() {
     };
 }
 
-// 对手（出题方）跟注
 function handleOppFollow(amount) {
     log(`对手跟注 ${fmt(amount)}`, 'opp');
     updateStats();
     showMyGuessInput();
 }
 
-// 我猜测
 function showMyGuessInput() {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
@@ -471,7 +483,6 @@ function showMyGuessInput() {
     };
 }
 
-// 出题方收到对手猜测
 function handleOppGuess(guess) {
     const result = judge(G.mySecret, guess);
     log(`对手猜：${guess} → ${result}`, 'opp');
@@ -481,7 +492,6 @@ function handleOppGuess(guess) {
     document.getElementById('actionPanel').innerHTML = '';
 }
 
-// 我（猜解方）收到反馈
 function handleGuessResult(result) {
     log(`反馈：${result}`, 'opp');
     const last = G.myGuessHistory[G.myGuessHistory.length - 1];
@@ -493,22 +503,18 @@ function handleGuessResult(result) {
 
     if (result === '6A0B') {
         log('🎉 你猜出了答案！', 'win');
-        // 桌上 2*stake 全归我
         const stake = G.currentTurnBet;
         G.myMoney += stake * 2;
         updateStats();
-        send('solved', { winner: 'me', stake: stake });
         endRound('me');
         return;
     }
 
-    // 猜错：桌上 2*stake 归对手
     const stake = G.currentTurnBet;
     G.oppMoney += stake * 2;
     log(`❌ 猜错，本回合赌注 ${fmt(stake * 2)} 归对手`, 'opp');
     updateStats();
 
-    // 检查是否超过宣言回合数
     if (G.guessedRounds > G.betRounds && !G.overRoundBetPaid) {
         G.overRoundBetPaid = true;
         const payout = G.roundBetAmount;
@@ -519,12 +525,10 @@ function handleGuessResult(result) {
         send('overBetPaid', { payout: payout });
     }
 
-    // 继续下一回合
     setTimeout(startMyTurnRound, 800);
 }
 
-// ==================== 对手猜解回合 ====================
-// 出题方收到逐回合叫注
+// ==================== 对手猜解 ====================
 function askFollowOrFold(amount) {
     const panel = document.getElementById('actionPanel');
     panel.innerHTML = `
@@ -566,7 +570,6 @@ function askFollowOrFold(amount) {
     };
 }
 
-// 猜解方收到对手投降
 function handleOppFold(payload) {
     log(`对手投降，罚金 ${fmt(payload.penalty)}`, 'win');
     G.myMoney += payload.penalty;
@@ -575,27 +578,16 @@ function handleOppFold(payload) {
     endRound(payload.winner);
 }
 
-// 猜解方猜中，通知出题方
-function handleOppSolved(payload) {
-    // 出题方：对手猜中
-    log('对手猜出了答案', 'opp');
-    // 我在 handleOppGuess 里已经处理了，这里不用再扣
-}
-
 // ==================== 局结束 ====================
 function endRound(winner) {
     G.phase = 'over';
     document.getElementById('actionPanel').innerHTML = '';
     setTurnBar(winner === 'me' ? '🎉 本局你赢了！' : '本局你输了', winner === 'me');
 
-    // 检查破产
     if (G.myMoney <= 0 || G.oppMoney <= 0) {
         setTimeout(() => {
-            if (G.myMoney <= 0) {
-                log('💀 你破产了，游戏结束', 'opp');
-            } else {
-                log('🏆 对手破产，你赢了！', 'win');
-            }
+            if (G.myMoney <= 0) log('💀 你破产了，游戏结束', 'opp');
+            else log('🏆 对手破产，你赢了！', 'win');
             document.getElementById('actionPanel').innerHTML = '<button onclick="location.reload()">再来一局</button>';
         }, 1500);
         return;
@@ -608,7 +600,6 @@ function endRound(winner) {
             startRound();
         }, 3000);
     } else {
-        // 4 局结束，比钱
         setTimeout(() => {
             log(`===== 对决结束 =====`, 'win');
             log(`你的最终资金：${fmt(G.myMoney)}`, 'win');
@@ -619,10 +610,6 @@ function endRound(winner) {
             document.getElementById('actionPanel').innerHTML = '<button onclick="location.reload()">再来一局</button>';
         }, 1500);
     }
-}
-
-function handleEndRound(payload) {
-    // 简化：不额外处理，各自在 endRound 里结算
 }
 
 // ==================== 连接 ====================
@@ -643,53 +630,11 @@ document.getElementById('joinBtn').onclick = () => {
         if (status === 'SUBSCRIBED') {
             setStatus('已进入房间：' + r);
             log(`已进入房间 ${r}，等待对手...`, 'sys');
-            // 发送 hello，谁先发谁就是房主（第一个进入的人）
             send('hello', {});
         } else {
             setStatus('连接状态：' + status);
         }
     });
-};
-
-// 谁先进入谁是房主
-let helloReceived = false;
-// 在 handleBroadcast 的 hello 里，如果我先收到 hello，说明我不是第一个
-// 但上面的 handleBroadcast 里已经处理了 hello：收到就发 hello-back
-
-// 简化房主判断：先发 hello 的是房主
-// 通过修改 handleBroadcast 实现
-const originalHandleBroadcast = handleBroadcast;
-handleBroadcast = function(event, payload) {
-    if (event === 'hello') {
-        oppOnline = true;
-        log('对手已进入房间', 'sys');
-        send('hello-back', {});
-        if (!joined) {
-            // 我先收到 hello，说明我是先进入的（房主）
-            isHost = true;
-            joined = true;
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('game').style.display = 'block';
-            log('你是房主', 'sys');
-            startRound();
-        }
-        return;
-    }
-    if (event === 'hello-back') {
-        oppOnline = true;
-        log('对手已确认在线', 'sys');
-        if (!joined) {
-            // 我先发 hello，收到 hello-back，说明我是房主
-            isHost = true;
-            joined = true;
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('game').style.display = 'block';
-            log('你是房主', 'sys');
-            startRound();
-        }
-        return;
-    }
-    originalHandleBroadcast(event, payload);
 };
 
 log('输入房间号，双方进入同一个房间即可开始', 'sys');
