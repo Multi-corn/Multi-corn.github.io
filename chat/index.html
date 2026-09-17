@@ -90,13 +90,14 @@ button.sec { background: #21262d; border: 1px solid #30363d; }
     </div>
 </div>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ==================== Supabase 配置 ====================
 const SUPABASE_URL = 'https://jzocedfhemyjlulcflrt.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EncbDbv4JJwcffBu3xka-A_oMcP9757';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// 注意：全局已经有一个 supabase 对象（库自带的），这里用 sb 避免重名
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let channel = null;
 let myName = '';
@@ -123,14 +124,12 @@ document.getElementById('joinBtn').onclick = () => {
 
     setStatus('正在连接 Supabase...');
 
-    // 用房间号作为频道名
-    channel = supabase.channel('chat-' + roomId, {
+    channel = sb.channel('chat-' + roomId, {
         config: {
-            broadcast: { self: false }  // 不发给自己
+            broadcast: { self: false }
         }
     });
 
-    // 监听广播消息
     channel.on('broadcast', { event: 'msg' }, (payload) => {
         log(`${payload.payload.from}: ${payload.payload.text}`, 'opp');
     });
@@ -139,7 +138,6 @@ document.getElementById('joinBtn').onclick = () => {
         log(`对方已进入房间`, 'sys');
     });
 
-    // 订阅频道
     channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
             setStatus('已进入房间：' + roomId);
@@ -147,7 +145,6 @@ document.getElementById('joinBtn').onclick = () => {
             myName = '我';
             log(`已进入房间 ${roomId}，等待对方...`, 'sys');
 
-            // 广播一条 hello，通知对方我进来了
             channel.send({
                 type: 'broadcast',
                 event: 'hello',
