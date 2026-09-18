@@ -171,6 +171,7 @@ let diceDone = false;
 let diceResolved = false;
 let myDice = 0;
 let oppDice = 0;
+let roundEnding = false;   // 防止 endRound 重复触发
 
 const G = {
     myMoney: START_MONEY,
@@ -275,12 +276,16 @@ function send(event, payload) {
     });
 }
 
+// 把钱同步给对方：每次本地算完账后调用
+function syncMoney() {
+    send('syncMoney', { my: G.myMoney, opp: G.oppMoney });
+}
+
 function handleBroadcast(event, payload) {
     switch (event) {
         case 'hello':
             log('对手已进入房间', 'sys');
             send('helloBack', {});
-            // 双方都尝试开始骰子，谁先触发谁开始，另一个不会重复
             tryStartDice();
             break;
         case 'helloBack':
@@ -289,6 +294,12 @@ function handleBroadcast(event, payload) {
             break;
         case 'dice':
             handleOppDice(payload.value);
+            break;
+        case 'syncMoney':
+            // 直接覆盖本地金额
+            G.myMoney = payload.opp;
+            G.oppMoney = payload.my;
+            updateStats();
             break;
         case 'secret':
             G.oppSecret = payload.secret;
@@ -318,7 +329,7 @@ function handleBroadcast(event, payload) {
             break;
         case 'follow':
             log(`对手跟注 ${fmt(payload.amount)}`, 'opp');
-            updateStats();
+            // 金额由对方同步，这里只更新界面
             showMyGuessInput();
             break;
         case 'fold':
@@ -326,9 +337,6 @@ function handleBroadcast(event, payload) {
             break;
         case 'overBetPaid':
             log(`对手超过宣言回合，赔付赌回合注 ${fmt(payload.payout)}`, 'win');
-            G.myMoney += payload.payout;
-            G.oppMoney -= payload.payout;
-            updateStats();
             break;
     }
 }
@@ -391,6 +399,7 @@ function checkDice() {
 
 // ==================== 每局开始 ====================
 function startRound() {
+    roundEnding = false;
     G.guessedRounds = 0;
     G.myGuessHistory = [];
     G.oppGuessHistory = [];
@@ -403,7 +412,6 @@ function startRound() {
     G.mySecret = '';
     G.oppSecret = '';
 
-    // 先猜方：第 1、4 局猜；第 2、3 局出题
     const firstGuesserGuesses = (G.round === 1 || G.round === 4);
     G.myTurn = amFirstGuesser ? firstGuesserGuesses : !firstGuesserGuesses;
 
@@ -472,6 +480,7 @@ function askBetRoundsResponse(rounds) {
         if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
         if (v > G.myMoney) { log('你的资金不足', 'sys'); return; }
         G.roundBetAmount = v;
+        // 赌回合金额暂不扣，等结算时转移
         send('betRoundsAmount', { amount: v });
         log(`你叫注（赌回合）：${fmt(v)}`, 'me');
         panel.innerHTML = '';
@@ -496,6 +505,7 @@ function startMyTurnRound() {
         if (v > G.myMoney) { log('资金不足', 'sys'); return; }
         G.currentTurnBet = v;
         G.myMoney -= v;
+        syncMoney();
         send('roundBet', { amount: v });
         log(`你叫注：${fmt(v)}（已扣除）`, 'me');
         updateStats();
@@ -506,7 +516,6 @@ function startMyTurnRound() {
 
 function handleOppFollow(amount) {
     log(`对手跟注 ${fmt(amount)}`, 'opp');
-    updateStats();
     showMyGuessInput();
 }
 
@@ -550,24 +559,28 @@ function handleGuessResult(result) {
     if (result === '6A0B') {
         log('🎉 你猜出了答案！', 'win');
         const stake = G.currentTurnBet;
+        // 桌上 2*stake 全归我（对手同步的时候已经处理）
         G.myMoney += stake * 2;
         updateStats();
+        syncMoney();
         endRound('me');
         return;
     }
 
     const stake = G.currentTurnBet;
     G.oppMoney += stake * 2;
-    log(`❌ 猜错，本回合赌注 ${fmt(stake * 2)} 归对手`, 'opp');
     updateStats();
+    syncMoney();
+    log(`❌ 猜错，本回合赌注 ${fmt(stake * 2)} 归对手`, 'opp');
 
     if (G.guessedRounds > G.betRounds && !G.overRoundBetPaid) {
         G.overRoundBetPaid = true;
         const payout = G.roundBetAmount;
         G.myMoney -= payout;
         G.oppMoney += payout;
-        log(`已超过宣言回合(${G.betRounds})，赔付赌回合注 ${fmt(payout)}`, 'opp');
         updateStats();
+        syncMoney();
+        log(`已超过宣言回合(${G.betRounds})，赔付赌回合注 ${fmt(payout)}`, 'opp');
         send('overBetPaid', { payout: payout });
     }
 
@@ -585,9 +598,10 @@ function askFollowOrFold(amount) {
     document.getElementById('followBtn').onclick = () => {
         if (G.myMoney < amount) { log('资金不足，只能投降', 'sys'); return; }
         G.myMoney -= amount;
+        updateStats();
+        syncMoney();
         send('follow', { amount: amount });
         log(`你跟注 ${fmt(amount)}`, 'me');
-        updateStats();
         panel.innerHTML = '';
         setTurnBar('等待对手猜测...', false);
     };
@@ -609,23 +623,25 @@ function askFollowOrFold(amount) {
         }
         G.myMoney -= penalty;
         G.oppMoney += penalty;
+        updateStats();
+        syncMoney();
         log(`你支付投降罚金 ${fmt(penalty)}`, 'me');
         send('fold', { penalty, winner, payout });
-        updateStats();
         endRound(winner);
     };
 }
 
 function handleOppFold(payload) {
     log(`对手投降，罚金 ${fmt(payload.penalty)}`, 'win');
-    G.myMoney += payload.penalty;
-    G.oppMoney -= payload.penalty;
-    updateStats();
+    // 金额由对方同步，这里只更新界面
     endRound(payload.winner);
 }
 
 // ==================== 局结束 ====================
 function endRound(winner) {
+    if (roundEnding) return;
+    roundEnding = true;
+
     document.getElementById('actionPanel').innerHTML = '';
     setTurnBar(winner === 'me' ? '🎉 本局你赢了！' : '本局你输了', winner === 'me');
 
