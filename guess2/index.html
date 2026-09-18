@@ -276,7 +276,6 @@ function send(event, payload) {
     });
 }
 
-// 谁算账，谁调用这个，把双方金额发给对方
 function syncMoney() {
     send('syncMoney', { my: G.myMoney, opp: G.oppMoney });
 }
@@ -296,7 +295,6 @@ function handleBroadcast(event, payload) {
             handleOppDice(payload.value);
             break;
         case 'syncMoney':
-            // 直接覆盖本地金额
             G.myMoney = payload.opp;
             G.oppMoney = payload.my;
             updateStats();
@@ -529,7 +527,6 @@ function showMyGuessInput() {
         const g = document.getElementById('guessInput').value.trim();
         if (!/^\d{6}$/.test(g)) { log('必须是 6 位数字', 'sys'); return; }
         G.myGuessHistory.push(g);
-        // 带上当前回合数，让出题方同步
         send('guess', { guess: g, round: G.guessedRounds + 1 });
         log(`你猜：${g}`, 'me');
         panel.innerHTML = '';
@@ -538,7 +535,6 @@ function showMyGuessInput() {
 }
 
 function handleOppGuess(guess, round) {
-    // 同步回合数
     if (round !== undefined) {
         G.guessedRounds = round;
     }
@@ -563,6 +559,13 @@ function handleGuessResult(result) {
         log('🎉 你猜出了答案！', 'win');
         const stake = G.currentTurnBet;
         G.myMoney += stake * 2;
+        
+        // ===== 结算赌回合：猜解方赢 =====
+        const roundBetPayout = G.roundBetAmount;
+        G.oppMoney -= roundBetPayout;
+        G.myMoney += roundBetPayout;
+        log(`你赢得赌回合注 ${fmt(roundBetPayout)}`, 'win');
+        
         updateStats();
         syncMoney();
         endRound('me');
@@ -575,7 +578,8 @@ function handleGuessResult(result) {
     syncMoney();
     log(`❌ 猜错，本回合赌注 ${fmt(stake * 2)} 归对手`, 'opp');
 
-    if (G.guessedRounds > G.betRounds && !G.overRoundBetPaid) {
+    // ===== 超过宣言回合：用 >= =====
+    if (G.guessedRounds >= G.betRounds && !G.overRoundBetPaid) {
         G.overRoundBetPaid = true;
         const payout = G.roundBetAmount;
         G.myMoney -= payout;
@@ -608,21 +612,22 @@ function askFollowOrFold(amount) {
         setTurnBar('等待对手猜测...', false);
     };
     document.getElementById('foldBtn').onclick = () => {
-        // 投降方已完成回合数：用 G.guessedRounds（已通过 guess 事件同步）
         const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
+        // ===== 投降胜负判断：用 G.guessedRounds + 1 =====
+        const surrenderRound = G.guessedRounds + 1;
         let winner, payout;
-        if (G.guessedRounds <= G.betRounds) {
+        if (surrenderRound <= G.betRounds) {
             winner = 'opp';
             payout = G.roundBetAmount;
             G.myMoney -= payout;
             G.oppMoney += payout;
-            log(`你投降，对手赢得赌回合 ${fmt(payout)}`, 'opp');
+            log(`你投降（第${surrenderRound}回合），对手赢得赌回合 ${fmt(payout)}`, 'opp');
         } else {
             winner = 'me';
             payout = G.roundBetAmount;
             G.myMoney += payout;
             G.oppMoney -= payout;
-            log(`你投降，但你赢得赌回合 ${fmt(payout)}`, 'win');
+            log(`你投降（第${surrenderRound}回合 > 宣言${G.betRounds}），你赢得赌回合 ${fmt(payout)}`, 'win');
         }
         G.myMoney -= penalty;
         G.oppMoney += penalty;
@@ -636,6 +641,7 @@ function askFollowOrFold(amount) {
 
 function handleOppFold(payload) {
     log(`对手投降，罚金 ${fmt(payload.penalty)}`, 'win');
+    // 金额由对方同步，这里只更新界面
     endRound(payload.winner);
 }
 
