@@ -171,7 +171,7 @@ let diceDone = false;
 let diceResolved = false;
 let myDice = 0;
 let oppDice = 0;
-let roundEnding = false;   // 防止 endRound 重复触发
+let roundEnding = false;
 
 const G = {
     myMoney: START_MONEY,
@@ -276,7 +276,7 @@ function send(event, payload) {
     });
 }
 
-// 把钱同步给对方：每次本地算完账后调用
+// 谁算账，谁调用这个，把双方金额发给对方
 function syncMoney() {
     send('syncMoney', { my: G.myMoney, opp: G.oppMoney });
 }
@@ -319,7 +319,7 @@ function handleBroadcast(event, payload) {
             startMyTurnRound();
             break;
         case 'guess':
-            handleOppGuess(payload.guess);
+            handleOppGuess(payload.guess, payload.round);
             break;
         case 'guessResult':
             handleGuessResult(payload.result);
@@ -329,7 +329,6 @@ function handleBroadcast(event, payload) {
             break;
         case 'follow':
             log(`对手跟注 ${fmt(payload.amount)}`, 'opp');
-            // 金额由对方同步，这里只更新界面
             showMyGuessInput();
             break;
         case 'fold':
@@ -480,7 +479,6 @@ function askBetRoundsResponse(rounds) {
         if (!v || v < minBet) { log(`叫注不能低于 ${fmt(minBet)}`, 'sys'); return; }
         if (v > G.myMoney) { log('你的资金不足', 'sys'); return; }
         G.roundBetAmount = v;
-        // 赌回合金额暂不扣，等结算时转移
         send('betRoundsAmount', { amount: v });
         log(`你叫注（赌回合）：${fmt(v)}`, 'me');
         panel.innerHTML = '';
@@ -531,14 +529,19 @@ function showMyGuessInput() {
         const g = document.getElementById('guessInput').value.trim();
         if (!/^\d{6}$/.test(g)) { log('必须是 6 位数字', 'sys'); return; }
         G.myGuessHistory.push(g);
-        send('guess', { guess: g });
+        // 带上当前回合数，让出题方同步
+        send('guess', { guess: g, round: G.guessedRounds + 1 });
         log(`你猜：${g}`, 'me');
         panel.innerHTML = '';
         setTurnBar('等待反馈...', false);
     };
 }
 
-function handleOppGuess(guess) {
+function handleOppGuess(guess, round) {
+    // 同步回合数
+    if (round !== undefined) {
+        G.guessedRounds = round;
+    }
     const result = judge(G.mySecret, guess);
     log(`对手猜：${guess} → ${result}`, 'opp');
     G.oppGuessHistory.push({ guess, result });
@@ -559,7 +562,6 @@ function handleGuessResult(result) {
     if (result === '6A0B') {
         log('🎉 你猜出了答案！', 'win');
         const stake = G.currentTurnBet;
-        // 桌上 2*stake 全归我（对手同步的时候已经处理）
         G.myMoney += stake * 2;
         updateStats();
         syncMoney();
@@ -606,6 +608,7 @@ function askFollowOrFold(amount) {
         setTurnBar('等待对手猜测...', false);
     };
     document.getElementById('foldBtn').onclick = () => {
+        // 投降方已完成回合数：用 G.guessedRounds（已通过 guess 事件同步）
         const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
         let winner, payout;
         if (G.guessedRounds <= G.betRounds) {
@@ -633,7 +636,6 @@ function askFollowOrFold(amount) {
 
 function handleOppFold(payload) {
     log(`对手投降，罚金 ${fmt(payload.penalty)}`, 'win');
-    // 金额由对方同步，这里只更新界面
     endRound(payload.winner);
 }
 
