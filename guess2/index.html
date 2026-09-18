@@ -334,6 +334,7 @@ function handleBroadcast(event, payload) {
             break;
         case 'overBetPaid':
             log(`对手超过宣言回合，赔付赌回合注 ${fmt(payload.payout)}`, 'win');
+            G.overRoundBetPaid = true;   // ← 补上，标记赌回合已结算
             break;
     }
 }
@@ -558,7 +559,6 @@ function handleGuessResult(result) {
         const stake = G.currentTurnBet;
         G.myMoney += stake * 2;
         
-        // 结算赌回合：猜解方赢
         const roundBetPayout = G.roundBetAmount;
         G.oppMoney -= roundBetPayout;
         G.myMoney += roundBetPayout;
@@ -592,7 +592,6 @@ function handleGuessResult(result) {
 
 // ==================== 对手猜解 ====================
 function askFollowOrFold(amount, round) {
-    // 同步回合数
     if (round !== undefined) G.guessedRounds = round - 1;
     
     const panel = document.getElementById('actionPanel');
@@ -612,25 +611,29 @@ function askFollowOrFold(amount, round) {
         setTurnBar('等待对手猜测...', false);
     };
     document.getElementById('foldBtn').onclick = () => {
-        // 投降回合 = 已完成回合 + 1
         const surrenderRound = G.guessedRounds + 1;
         const penalty = calcPenalty(G.oppStartMoney, G.guessedRounds, amount);
         const roundBetAmount = G.roundBetAmount;
-        const stake = amount;  // 猜解方本回合叫注
+        const stake = amount;
         
-        let winner, roundBetPayout;
-        if (surrenderRound <= G.betRounds) {
-            winner = 'opp';
-            roundBetPayout = roundBetAmount;
-            G.myMoney -= roundBetPayout;
-            G.oppMoney += roundBetPayout;
-            log(`投降回合(${surrenderRound}) ≤ 宣言(${G.betRounds})，猜解方赢得赌回合 ${fmt(roundBetPayout)}`, 'opp');
+        let winner;
+        
+        // 赌回合：如果之前已经因为超过宣言回合结算过，就不再结算
+        if (G.overRoundBetPaid) {
+            winner = 'me';  // 超过宣言回合后，出题方赢赌回合
+            log(`赌回合已在超过宣言回合时结算，本次投降不再重复`, 'sys');
         } else {
-            winner = 'me';
-            roundBetPayout = roundBetAmount;
-            G.myMoney += roundBetPayout;
-            G.oppMoney -= roundBetPayout;
-            log(`投降回合(${surrenderRound}) > 宣言(${G.betRounds})，出题方赢得赌回合 ${fmt(roundBetPayout)}`, 'win');
+            if (surrenderRound <= G.betRounds) {
+                winner = 'opp';
+                G.myMoney -= roundBetAmount;
+                G.oppMoney += roundBetAmount;
+                log(`投降回合(${surrenderRound}) ≤ 宣言(${G.betRounds})，猜解方赢得赌回合 ${fmt(roundBetAmount)}`, 'opp');
+            } else {
+                winner = 'me';
+                G.myMoney += roundBetAmount;
+                G.oppMoney -= roundBetAmount;
+                log(`投降回合(${surrenderRound}) > 宣言(${G.betRounds})，出题方赢得赌回合 ${fmt(roundBetAmount)}`, 'win');
+            }
         }
         
         // 退还猜解方本回合叫注（本回合不成立）
@@ -644,14 +647,14 @@ function askFollowOrFold(amount, round) {
         
         updateStats();
         syncMoney();
-        send('fold', { penalty, winner, payout: roundBetPayout, stake: stake });
+        send('fold', { penalty, winner, stake: stake });
         endRound(winner);
     };
 }
 
 function handleOppFold(payload) {
     log(`对手投降，罚金 ${fmt(payload.penalty)}`, 'win');
-    log(`本回合不成立，退还你的叫注 ${fmt(payload.stake)}`, 'sys');
+    if (payload.stake) log(`本回合不成立，退还你的叫注 ${fmt(payload.stake)}`, 'sys');
     // 金额由对方 syncMoney 覆盖，这里不自己算
     endRound(payload.winner);
 }
