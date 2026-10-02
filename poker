@@ -824,4 +824,44 @@ function aiTurn() {
     let cards = null;
     if (lastInfo) {
         // 是否要压
-        const isTeammate = (p === 2 && G.lastPlayer === 0
+        const isTeammate = (p === 2 && G.lastPlayer === 0) || (p === 0 && G.lastPlayer === 2) ||
+                          (p === 1 && G.lastPlayer === 3) || (p === 3 && G.lastPlayer === 1);
+        // 队友出的牌，不压（除非队友快出完了，帮不了）
+        if (isTeammate) {
+            cards = null;  // 不压
+        } else {
+            // 对手出的牌，尝试压
+            cards = findHint(hand, lastInfo);
+            // 如果对手快出完了（<= 3 张），加大力度
+            if (G.hands[G.lastPlayer].length <= 3) {
+                // 尝试用炸弹
+                const bomb = findBomb(hand, lastInfo);
+                if (bomb) cards = bomb;
+            }
+        }
+    } else {
+        // 先手，出最小的单张或对子
+        cards = [hand[0]];
+    }
+    if (cards && cards.length > 0) {
+        const info = identify(cards);
+        if (info) {
+            playCards(p, cards, info);
+            G.currentPlayer = (p + 1) % 4;
+            updateControls();
+            if (G.playing) setTimeout(aiTurn, 800);
+            return;
+        }
+    }
+    // 不出
+    pass(p);
+    G.currentPlayer = (p + 1) % 4;
+    updateControls();
+    if (G.playing) setTimeout(aiTurn, 800);
+}
+
+// ==================== 启动 ====================
+deal();
+</script>
+</body>
+</html>
