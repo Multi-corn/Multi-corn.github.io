@@ -842,7 +842,8 @@ function findBomb(hand, lastInfo) {
 }
 
 // ==================== AI 先手：拆牌评估 ====================
-// 枚举所有可能的"完整牌型"出牌方案，评估拆牌损失，选最优function aiChooseBestLead(hand) {
+// 枚举所有可能的"完整牌型"出牌方案，评估拆牌损失，选最优
+function aiChooseBestLead(hand) {
     if (hand.length === 0) return null;
     const candidates = [];
 
