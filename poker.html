@@ -19,7 +19,6 @@ body {
 }
 h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
 
-/* 记牌器（横排置顶） */
 #counter {
     width: 100%;
     max-width: 900px;
@@ -79,6 +78,7 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
 }
 .player .name { color: #8ecae6; margin-bottom: 2px; }
 .player .count { color: #aaa; font-size: 12px; }
+.player .rank-tag { color: #f0c040; font-size: 12px; font-weight: bold; }
 #p0 { bottom: 8px; left: 50%; transform: translateX(-50%); }
 #p1 { left: 8px; top: 50%; transform: translateY(-50%); }
 #p2 { top: 8px; left: 50%; transform: translateX(-50%); }
@@ -172,11 +172,11 @@ button.sec { background: #4a7a5a; color: #fff; }
 <div id="counter"></div>
 
 <div id="table">
-    <div class="player" id="p1"><div class="name">AI 左</div><div class="count" id="c1">27</div></div>
-    <div class="player" id="p2"><div class="name">AI 对家（队友）</div><div class="count" id="c2">27</div></div>
-    <div class="player" id="p3"><div class="name">AI 右</div><div class="count" id="c3">27</div></div>
+    <div class="player" id="p1"><div class="name">AI 左 <span class="rank-tag" id="r1"></span></div><div class="count" id="c1">27</div></div>
+    <div class="player" id="p2"><div class="name">AI 对家 <span class="rank-tag" id="r2"></span></div><div class="count" id="c2">27</div></div>
+    <div class="player" id="p3"><div class="name">AI 右 <span class="rank-tag" id="r3"></span></div><div class="count" id="c3">27</div></div>
     <div class="playArea" id="playArea"></div>
-    <div class="player" id="p0"><div class="name">我</div><div class="count" id="c0">27</div></div>
+    <div class="player" id="p0"><div class="name">我 <span class="rank-tag" id="r0"></span></div><div class="count" id="c0">27</div></div>
 </div>
 
 <div id="myHand"></div>
@@ -472,6 +472,7 @@ const G = {
     selected: new Set(),
     finished: [],
     playedCards: [],
+    newRoundStarter: null,  // 新一轮发起者
 };
 
 // ==================== 记牌器 ====================
@@ -531,6 +532,17 @@ function renderCounts() {
     }
 }
 
+function renderRanks() {
+    for (let i = 0; i < 4; i++) {
+        const el = document.getElementById('r' + i);
+        if (G.finished.includes(i)) {
+            el.textContent = `(第${G.finished.indexOf(i) + 1}名)`;
+        } else {
+            el.textContent = '';
+        }
+    }
+}
+
 function renderPlayArea() {
     const el = document.getElementById('playArea');
     if (!G.lastPlay) { el.innerHTML = ''; return; }
@@ -563,9 +575,11 @@ function deal() {
     G.selected.clear();
     G.finished = [];
     G.playedCards = [];
+    G.newRoundStarter = null;
     G.playing = true;
     renderHand();
     renderCounts();
+    renderRanks();
     renderPlayArea();
     renderCounter();
     log('=== 新一局开始，你先出牌 ===', 'sys');
@@ -591,6 +605,7 @@ function playCards(player, cards, info) {
     log(`${playerName(player)} 出：${cards.map(cardName).join(' ')}`, player === 0 ? 'my' : '');
     if (G.hands[player].length === 0) {
         G.finished.push(player);
+        renderRanks();
         log(`${playerName(player)} 第 ${G.finished.length} 名出完！`, 'sys');
     }
     checkGameOver();
@@ -611,7 +626,7 @@ function pass(player) {
     if (G.passCount >= 3 && G.lastPlayer >= 0) {
         G.lastPlay = null;
         G.passCount = 0;
-        G.currentPlayer = G.lastPlayer;
+        G.newRoundStarter = G.lastPlayer;  // 记录新一轮发起者
         renderPlayArea();
         log('一轮结束，重新出牌', 'sys');
     }
@@ -636,6 +651,7 @@ function finishGame() {
     const remaining = [0,1,2,3].filter(p => !G.finished.includes(p));
     remaining.sort((a,b) => G.hands[a].length - G.hands[b].length);
     G.finished = G.finished.concat(remaining);
+    renderRanks();
 
     const names = G.finished.map((p, i) => `${i+1}. ${playerName(p)}`).join('  ');
     log(`本局结束：${names}`, 'sys');
@@ -700,22 +716,33 @@ function updateControls() {
     document.getElementById('hintBtn').disabled = !myTurn;
 }
 
-// 推进到下一个未出完的玩家
+// 推进到下一个未出完的玩家，或新一轮发起者
 function advanceTurn() {
     if (!G.playing) return;
-    let next = (G.currentPlayer + 1) % 4;
-    let count = 0;
-    while (G.hands[next].length === 0 && count < 4) {
-        next = (next + 1) % 4;
-        count++;
+    let next;
+    if (G.newRoundStarter !== null) {
+        next = G.newRoundStarter;
+        G.newRoundStarter = null;
+        // 发起者已出完，找下家
+        if (G.hands[next].length === 0) {
+            let count = 0;
+            do {
+                next = (next + 1) % 4;
+                count++;
+            } while (G.hands[next].length === 0 && count < 4);
+        }
+    } else {
+        next = (G.currentPlayer + 1) % 4;
+        let count = 0;
+        while (G.hands[next].length === 0 && count < 4) {
+            next = (next + 1) % 4;
+            count++;
+        }
     }
     G.currentPlayer = next;
     updateControls();
-    if (G.currentPlayer === 0) {
-        // 轮到我
-        return;
-    }
-    setTimeout(aiTurn, 800);
+    if (G.currentPlayer === 0) return;
+    setTimeout(aiTurn, 3000);
 }
 
 // ==================== 找牌 ====================
@@ -814,46 +841,100 @@ function findBomb(hand, lastInfo) {
     return null;
 }
 
-// AI 先手：不拆对子/三条，优先出单张 → 对子 → 三条，从小到大
-function aiChooseLead(hand) {
-    // 统计每个点数的张数
+// ==================== AI 先手：拆牌评估 ====================
+// 枚举所有可能的"完整牌型"出牌方案，评估拆牌损失，选最优function aiChooseBestLead(hand) {
+    if (hand.length === 0) return null;
+    const candidates = [];
+
+    // 1. 单张：手里数量为 1 的点数（不拆对子）
     const count = {};
     for (const c of hand) {
-        if (c.suit === 'JOKER') {
-            count[c.rank] = (count[c.rank] || 0) + 1;
-        } else if (!isWild(c)) {
-            count[c.rank] = (count[c.rank] || 0) + 1;
-        }
+        if (c.suit === 'JOKER' || isWild(c)) continue;
+        count[c.rank] = (count[c.rank] || 0) + 1;
     }
-    const wilds = hand.filter(isWild);
-    // 单张：数量为 1 的点数（不含王、不含赖子）
-    const singleRanks = Object.keys(count).filter(r => count[r] === 1 && r !== '大王' && r !== '小王');
-    // 对子：数量为 2
-    const pairRanks = Object.keys(count).filter(r => count[r] === 2);
-    // 三条：数量为 3
-    const tripleRanks = Object.keys(count).filter(r => count[r] === 3);
+    const singleRanks = Object.keys(count).filter(r => count[r] === 1);
+    for (const r of singleRanks) {
+        const card = hand.find(c => c.rank === r && !isWild(c) && c.suit !== 'JOKER');
+        if (card) candidates.push({ cards: [card], type: 'single' });
+    }
 
-    // 优先出最小单张
-    if (singleRanks.length > 0) {
-        singleRanks.sort((a,b) => rankValue(a) - rankValue(b));
-        const r = singleRanks[0];
-        return [hand.find(c => c.rank === r && !isWild(c))];
+    // 2. 对子
+    const pairRanks = Object.keys(count).filter(r => count[r] === 2);
+    for (const r of pairRanks) {
+        const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
+        candidates.push({ cards, type: 'pair' });
     }
-    // 出最小对子
-    if (pairRanks.length > 0) {
-        pairRanks.sort((a,b) => rankValue(a) - rankValue(b));
-        const r = pairRanks[0];
-        return hand.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
+
+    // 3. 三条
+    const tripleRanks = Object.keys(count).filter(r => count[r] >= 3);
+    for (const r of tripleRanks) {
+        const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
+        candidates.push({ cards, type: 'triple' });
     }
-    // 出最小三条
-    if (tripleRanks.length > 0) {
-        tripleRanks.sort((a,b) => rankValue(a) - rankValue(b));
-        const r = tripleRanks[0];
-        return hand.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
+
+    // 4. 顺子：尝试所有 5 连
+    for (let start = 2; start <= 10; start++) {
+        const need = [];
+        for (let i = 0; i < 5; i++) need.push(start + i);
+        const cards = [];
+        let ok = true;
+        for (const v of need) {
+            const rankStr = RANKS[v - 2];
+            const found = hand.find(c => c.rank === rankStr && !isWild(c) && c.suit !== 'JOKER' && !cards.includes(c));
+            if (found) cards.push(found);
+            else { ok = false; break; }
+        }
+        if (ok) candidates.push({ cards, type: 'straight' });
     }
-    // 没别的了，出最小单张（可能拆对子）
-    const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
-    return [sorted[0]];
+
+    if (candidates.length === 0) {
+        // 只剩王或赖子，出最小的
+        const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
+        return [sorted[0]];
+    }
+
+    // 对每个候选评分：出掉这手后，剩余手牌能组成多少完整牌型
+    for (const cand of candidates) {
+        const ids = new Set(cand.cards.map(c => c.id));
+        const rest = hand.filter(c => !ids.has(c.id));
+        cand.score = evaluateRest(rest);
+        cand.minValue = Math.min(...cand.cards.map(c => rankValue(c.rank)));
+    }
+
+    // 选分最高的；分相同选牌值最小的
+    candidates.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.minValue - b.minValue;
+    });
+    return candidates[0].cards;
+}
+
+// 评估剩余手牌：能组成多少完整牌型（对子、三条、顺子），越多越好
+function evaluateRest(hand) {
+    if (hand.length === 0) return 100;
+    const count = {};
+    for (const c of hand) {
+        if (c.suit === 'JOKER' || isWild(c)) continue;
+        count[c.rank] = (count[c.rank] || 0) + 1;
+    }
+    let score = 0;
+    // 对子 +2 分
+    for (const r in count) if (count[r] >= 2) score += 2;
+    // 三条 +3 分
+    for (const r in count) if (count[r] >= 3) score += 3;
+    // 顺子 +5 分
+    for (let start = 2; start <= 10; start++) {
+        let ok = true;
+        for (let i = 0; i < 5; i++) {
+            if (!count[RANKS[start + i - 2]]) { ok = false; break; }
+        }
+        if (ok) score += 5;
+    }
+    // 散牌扣分
+    let singles = 0;
+    for (const r in count) if (count[r] === 1) singles++;
+    score -= singles * 1;
+    return score;
 }
 
 // ==================== AI ====================
@@ -881,8 +962,7 @@ function aiTurn() {
             }
         }
     } else {
-        // 先手：用 aiChooseLead
-        cards = aiChooseLead(hand);
+        cards = aiChooseBestLead(hand);
     }
     if (cards && cards.length > 0) {
         const info = identify(cards);
