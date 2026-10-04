@@ -472,7 +472,7 @@ const G = {
     selected: new Set(),
     finished: [],
     playedCards: [],
-    newRoundStarter: null,  // 新一轮发起者
+    newRoundStarter: null,
 };
 
 // ==================== 记牌器 ====================
@@ -626,7 +626,7 @@ function pass(player) {
     if (G.passCount >= 3 && G.lastPlayer >= 0) {
         G.lastPlay = null;
         G.passCount = 0;
-        G.newRoundStarter = G.lastPlayer;  // 记录新一轮发起者
+        G.newRoundStarter = G.lastPlayer;
         renderPlayArea();
         log('一轮结束，重新出牌', 'sys');
     }
@@ -716,14 +716,12 @@ function updateControls() {
     document.getElementById('hintBtn').disabled = !myTurn;
 }
 
-// 推进到下一个未出完的玩家，或新一轮发起者
 function advanceTurn() {
     if (!G.playing) return;
     let next;
     if (G.newRoundStarter !== null) {
         next = G.newRoundStarter;
         G.newRoundStarter = null;
-        // 发起者已出完，找下家
         if (G.hands[next].length === 0) {
             let count = 0;
             do {
@@ -841,46 +839,109 @@ function findBomb(hand, lastInfo) {
     return null;
 }
 
-// ==================== AI 先手：拆牌评估 ====================
-// 枚举所有可能的"完整牌型"出牌方案，评估拆牌损失，选最优
+// ==================== 手牌价值评估（DanKS V1 风格） ====================
+function handValue(hand) {
+    if (hand.length === 0) return 1000;
+    let score = 0;
+
+    const count = {};
+    const jokers = { big: 0, small: 0 };
+    const wilds = [];
+    for (const c of hand) {
+        if (c.suit === 'JOKER') {
+            if (c.rank === '大王') jokers.big++;
+            else jokers.small++;
+            continue;
+        }
+        if (isWild(c)) { wilds.push(c); continue; }
+        count[c.rank] = (count[c.rank] || 0) + 1;
+    }
+
+    // 对子 +2，三条 +4，炸弹 +10
+    let pairs = 0, triples = 0, bombs = 0;
+    for (const r in count) {
+        const n = count[r];
+        if (n >= 4) bombs++;
+        else if (n === 3) triples++;
+        else if (n === 2) pairs++;
+    }
+    score += pairs * 2 + triples * 4 + bombs * 10;
+
+    // 顺子 +5
+    const ranks = Object.keys(count).map(r => rankValueForStraight(r)).sort((a,b)=>a-b);
+    let straights = 0;
+    for (let start = 2; start <= 10; start++) {
+        let ok = true;
+        for (let i = 0; i < 5; i++) {
+            if (!ranks.includes(start + i)) { ok = false; break; }
+        }
+        if (ok) straights++;
+    }
+    score += straights * 5;
+
+    // 散牌 -2
+    let singles = 0;
+    for (const r in count) {
+        if (count[r] === 1) singles++;
+    }
+    score -= singles * 2;
+
+    // 大牌保留奖励
+    let bigCards = 0;
+    for (const r in count) {
+        if (r === LEVEL) bigCards += count[r];
+        if (r === 'A') bigCards += count[r];
+    }
+    bigCards += jokers.big * 3 + jokers.small * 2;
+    score += bigCards * 1.5;
+
+    // 万能牌 +6
+    score += wilds.length * 6;
+
+    // 手牌越少越好
+    score += (27 - hand.length) * 0.5;
+
+    return score;
+}
+
+// ==================== AI 主动出牌 ====================
 function aiChooseBestLead(hand) {
     if (hand.length === 0) return null;
     const candidates = [];
 
-    // 1. 单张：手里数量为 1 的点数（不拆对子）
     const count = {};
     for (const c of hand) {
         if (c.suit === 'JOKER' || isWild(c)) continue;
         count[c.rank] = (count[c.rank] || 0) + 1;
     }
-    const singleRanks = Object.keys(count).filter(r => count[r] === 1);
-    for (const r of singleRanks) {
-        const card = hand.find(c => c.rank === r && !isWild(c) && c.suit !== 'JOKER');
-        if (card) candidates.push({ cards: [card], type: 'single' });
-    }
 
-    // 2. 对子
-    const pairRanks = Object.keys(count).filter(r => count[r] === 2);
-    for (const r of pairRanks) {
-        const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
-        candidates.push({ cards, type: 'pair' });
+    // 单张（只取数量为 1 的，不拆对子）
+    for (const r in count) {
+        if (count[r] === 1) {
+            const card = hand.find(c => c.rank === r && !isWild(c) && c.suit !== 'JOKER');
+            if (card) candidates.push({ cards: [card], type: 'single' });
+        }
     }
-
-    // 3. 三条
-    const tripleRanks = Object.keys(count).filter(r => count[r] >= 3);
-    for (const r of tripleRanks) {
-        const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
-        candidates.push({ cards, type: 'triple' });
+    // 对子
+    for (const r in count) {
+        if (count[r] === 2) {
+            const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
+            candidates.push({ cards, type: 'pair' });
+        }
     }
-
-    // 4. 顺子：尝试所有 5 连
+    // 三条
+    for (const r in count) {
+        if (count[r] >= 3) {
+            const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
+            candidates.push({ cards, type: 'triple' });
+        }
+    }
+    // 顺子
     for (let start = 2; start <= 10; start++) {
-        const need = [];
-        for (let i = 0; i < 5; i++) need.push(start + i);
         const cards = [];
         let ok = true;
-        for (const v of need) {
-            const rankStr = RANKS[v - 2];
+        for (let i = 0; i < 5; i++) {
+            const rankStr = RANKS[start + i - 2];
             const found = hand.find(c => c.rank === rankStr && !isWild(c) && c.suit !== 'JOKER' && !cards.includes(c));
             if (found) cards.push(found);
             else { ok = false; break; }
@@ -889,53 +950,24 @@ function aiChooseBestLead(hand) {
     }
 
     if (candidates.length === 0) {
-        // 只剩王或赖子，出最小的
         const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
         return [sorted[0]];
     }
 
-    // 对每个候选评分：出掉这手后，剩余手牌能组成多少完整牌型
     for (const cand of candidates) {
         const ids = new Set(cand.cards.map(c => c.id));
         const rest = hand.filter(c => !ids.has(c.id));
-        cand.score = evaluateRest(rest);
+        cand.restValue = handValue(rest);
         cand.minValue = Math.min(...cand.cards.map(c => rankValue(c.rank)));
+        cand.typeBonus = cand.type === 'straight' ? 3 : cand.type === 'triple' ? 2 : cand.type === 'pair' ? 1 : 0;
     }
 
-    // 选分最高的；分相同选牌值最小的
     candidates.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
+        if (Math.abs(b.restValue - a.restValue) > 0.5) return b.restValue - a.restValue;
+        if (b.typeBonus !== a.typeBonus) return b.typeBonus - a.typeBonus;
         return a.minValue - b.minValue;
     });
     return candidates[0].cards;
-}
-
-// 评估剩余手牌：能组成多少完整牌型（对子、三条、顺子），越多越好
-function evaluateRest(hand) {
-    if (hand.length === 0) return 100;
-    const count = {};
-    for (const c of hand) {
-        if (c.suit === 'JOKER' || isWild(c)) continue;
-        count[c.rank] = (count[c.rank] || 0) + 1;
-    }
-    let score = 0;
-    // 对子 +2 分
-    for (const r in count) if (count[r] >= 2) score += 2;
-    // 三条 +3 分
-    for (const r in count) if (count[r] >= 3) score += 3;
-    // 顺子 +5 分
-    for (let start = 2; start <= 10; start++) {
-        let ok = true;
-        for (let i = 0; i < 5; i++) {
-            if (!count[RANKS[start + i - 2]]) { ok = false; break; }
-        }
-        if (ok) score += 5;
-    }
-    // 散牌扣分
-    let singles = 0;
-    for (const r in count) if (count[r] === 1) singles++;
-    score -= singles * 1;
-    return score;
 }
 
 // ==================== AI ====================
@@ -956,7 +988,24 @@ function aiTurn() {
         if (isTeammate) {
             cards = null;
         } else {
-            cards = findHint(hand, lastInfo);
+            const hint = findHint(hand, lastInfo);
+            if (hint && hint.length > 0) {
+                const ids = new Set(hint.map(c => c.id));
+                const rest = hand.filter(c => !ids.has(c.id));
+                const beforeValue = handValue(hand);
+                const afterValue = handValue(rest);
+                const drop = beforeValue - afterValue;
+                const oppCardCount = G.hands[G.lastPlayer] ? G.hands[G.lastPlayer].length : 27;
+                const isUrgent = oppCardCount <= 5;
+                if (isUrgent || drop < 8) {
+                    cards = hint;
+                } else {
+                    cards = null;
+                }
+            } else {
+                cards = null;
+            }
+            // 对手快出完，用炸弹
             if (G.hands[G.lastPlayer] && G.hands[G.lastPlayer].length <= 3) {
                 const bomb = findBomb(hand, lastInfo);
                 if (bomb) cards = bomb;
