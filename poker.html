@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>掼蛋 · 简化单机版</title>
+<title>掼蛋 · 简化单机版（调试）</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -65,7 +65,7 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
     position: relative;
     width: 100%;
     max-width: 900px;
-    height: 460px;
+    height: 420px;
     background: #0f2a1c;
     border-radius: 12px;
     border: 2px solid #2a5a3a;
@@ -128,6 +128,35 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
     max-width: 900px;
     margin-bottom: 8px;
 }
+
+/* AI 手牌显示区（调试用） */
+#aiHands {
+    width: 100%;
+    max-width: 900px;
+    background: #0a1f12;
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+#aiHands .ai-row {
+    margin-bottom: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+}
+#aiHands .ai-label {
+    color: #8ecae6;
+    min-width: 70px;
+    font-weight: bold;
+}
+#aiHands .ai-row .card.small {
+    width: 34px;
+    height: 46px;
+    font-size: 12px;
+}
+
 #controls {
     display: flex;
     gap: 8px;
@@ -148,6 +177,7 @@ button {
 button:hover { opacity: 0.85; }
 button:disabled { background: #555; color: #999; cursor: not-allowed; }
 button.sec { background: #4a7a5a; color: #fff; }
+button.debug { background: #8a6a3a; color: #fff; }
 #log {
     width: 100%;
     max-width: 900px;
@@ -167,7 +197,7 @@ button.sec { background: #4a7a5a; color: #fff; }
 </head>
 <body>
 
-<h1>掼蛋 · 简化单机版（打 2）</h1>
+<h1>掼蛋 · 简化单机版（调试模式）</h1>
 
 <div id="counter"></div>
 
@@ -179,12 +209,16 @@ button.sec { background: #4a7a5a; color: #fff; }
     <div class="player" id="p0"><div class="name">我 <span class="rank-tag" id="r0"></span></div><div class="count" id="c0">27</div></div>
 </div>
 
+<!-- 调试：AI 手牌显示 -->
+<div id="aiHands"></div>
+
 <div id="myHand"></div>
 
 <div id="controls">
     <button id="playBtn">出牌</button>
     <button id="passBtn" class="sec">不出</button>
     <button id="hintBtn" class="sec">提示</button>
+    <button id="nextBtn" class="debug">AI 下一步</button>
     <button id="restartBtn" class="sec">重开</button>
 </div>
 
@@ -241,6 +275,36 @@ function shuffle(arr) {
 
 function isWild(card) {
     return card.suit === '♥' && card.rank === LEVEL;
+}
+
+// ==================== 大牌定义（按牌型） ====================
+// 单张大牌：王、级牌、A
+function isBigSingle(card) {
+    const v = rankValue(card.rank);
+    return v >= 14;  // A=14, 级牌=15, 王=16/17
+}
+// 对子大牌：王、级牌、A、K
+function isBigPair(rank) {
+    const v = rankValue(rank);
+    return v >= 13;  // K=13
+}
+// 三条/葫芦大牌：级牌、A、K、Q
+function isBigTriple(rank) {
+    const v = rankValue(rank);
+    return v >= 12;  // Q=12
+}
+// 顺子大牌：起点 >= 10（到Q、K、A）
+function isBigStraight(startLevel) {
+    return startLevel >= 10;
+}
+
+// 判断是不是小废牌（单张 < 7）
+function isSmallSingle(card) {
+    if (card.suit === 'JOKER') return false;
+    return rankValue(card.rank) <= 6;  // 2~6（级牌2也是小？但级牌特殊，不算）
+}
+function isSmallPair(rank) {
+    return rankValue(rank) <= 5;  // 对 3~5
 }
 
 // ==================== 牌型识别 ====================
@@ -478,6 +542,18 @@ const G = {
 // ==================== 记牌器 ====================
 const COUNTER_ORDER = ['大王','小王','2','A','K','Q','J','10','9','8','7','6','5','4','3'];
 
+// 计算某个点数在外面还剩几张（用于 AI 估算）
+function remainingCount(rank) {
+    let total = (rank === '大王' || rank === '小王') ? 2 : 8;
+    let played = 0;
+    for (const c of G.playedCards) {
+        if (c.rank === rank) played++;
+    }
+    // 减去自己手里的（如果 rank 是自己有的）
+    // 注：这个函数用于估算“外面还剩几张”，不减去自己的
+    return total - played;
+}
+
 function renderCounter() {
     const el = document.getElementById('counter');
     const total = { '大王': 2, '小王': 2 };
@@ -549,6 +625,19 @@ function renderPlayArea() {
     el.innerHTML = G.lastPlay.cards.map(c => cardHTML(c, true)).join('');
 }
 
+// 调试：显示 3 个 AI 的手牌
+function renderAiHands() {
+    const el = document.getElementById('aiHands');
+    let html = '';
+    for (let p = 1; p <= 3; p++) {
+        const sorted = [...G.hands[p]].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
+        html += `<div class="ai-row"><span class="ai-label">${playerName(p)} (${sorted.length})</span>`;
+        html += sorted.map(c => cardHTML(c, true)).join('');
+        html += `</div>`;
+    }
+    el.innerHTML = html;
+}
+
 function log(msg, cls = '') {
     const el = document.getElementById('log');
     const div = document.createElement('div');
@@ -582,6 +671,7 @@ function deal() {
     renderRanks();
     renderPlayArea();
     renderCounter();
+    renderAiHands();
     log('=== 新一局开始，你先出牌 ===', 'sys');
     updateControls();
 }
@@ -602,6 +692,7 @@ function playCards(player, cards, info) {
     renderCounts();
     renderPlayArea();
     renderCounter();
+    renderAiHands();
     log(`${playerName(player)} 出：${cards.map(cardName).join(' ')}`, player === 0 ? 'my' : '');
     if (G.hands[player].length === 0) {
         G.finished.push(player);
@@ -704,6 +795,13 @@ document.getElementById('hintBtn').onclick = () => {
     log(`提示：${hint.map(cardName).join(' ')}`, 'sys');
 };
 
+// 调试：AI 下一步
+document.getElementById('nextBtn').onclick = () => {
+    if (!G.playing) return;
+    if (G.currentPlayer === 0) { log('轮到你出牌，不能按 AI 下一步', 'sys'); return; }
+    aiTurn();
+};
+
 document.getElementById('restartBtn').onclick = () => {
     document.getElementById('log').innerHTML = '';
     deal();
@@ -714,6 +812,7 @@ function updateControls() {
     document.getElementById('playBtn').disabled = !myTurn;
     document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay;
     document.getElementById('hintBtn').disabled = !myTurn;
+    document.getElementById('nextBtn').disabled = !G.playing || G.currentPlayer === 0;
 }
 
 function advanceTurn() {
@@ -739,8 +838,7 @@ function advanceTurn() {
     }
     G.currentPlayer = next;
     updateControls();
-    if (G.currentPlayer === 0) return;
-    setTimeout(aiTurn, 1500);
+    // 调试模式：不再自动触发 AI，改为手动点"AI 下一步"
 }
 
 // ==================== 找牌 ====================
@@ -839,7 +937,7 @@ function findBomb(hand, lastInfo) {
     return null;
 }
 
-// ==================== 手牌价值评估（DanKS V1 风格） ====================
+// ==================== 手牌价值评估 ====================
 function handValue(hand) {
     if (hand.length === 0) return 1000;
     let score = 0;
@@ -857,7 +955,6 @@ function handValue(hand) {
         count[c.rank] = (count[c.rank] || 0) + 1;
     }
 
-    // 对子 +2，三条 +4，炸弹 +10
     let pairs = 0, triples = 0, bombs = 0;
     for (const r in count) {
         const n = count[r];
@@ -867,7 +964,6 @@ function handValue(hand) {
     }
     score += pairs * 2 + triples * 4 + bombs * 10;
 
-    // 顺子 +5
     const ranks = Object.keys(count).map(r => rankValueForStraight(r)).sort((a,b)=>a-b);
     let straights = 0;
     for (let start = 2; start <= 10; start++) {
@@ -879,14 +975,12 @@ function handValue(hand) {
     }
     score += straights * 5;
 
-    // 散牌 -2
     let singles = 0;
     for (const r in count) {
         if (count[r] === 1) singles++;
     }
     score -= singles * 2;
 
-    // 大牌保留奖励
     let bigCards = 0;
     for (const r in count) {
         if (r === LEVEL) bigCards += count[r];
@@ -895,16 +989,79 @@ function handValue(hand) {
     bigCards += jokers.big * 3 + jokers.small * 2;
     score += bigCards * 1.5;
 
-    // 万能牌 +6
     score += wilds.length * 6;
-
-    // 手牌越少越好
     score += (27 - hand.length) * 0.5;
 
     return score;
 }
 
-// ==================== AI 主动出牌 ====================
+// ==================== AI 主动出牌（分层优先级） ====================
+// 判断这手牌是不是"小废牌"
+function isWastePlay(cards, info) {
+    if (!info) return false;
+    if (info.type === 'single') {
+        return isSmallSingle(cards[0]);
+    }
+    if (info.type === 'pair') {
+        const { normals } = analyzeCards(cards);
+        if (normals.length > 0) return isSmallPair(normals[0].rank);
+        return false;
+    }
+    return false;
+}
+
+// 判断这手牌是不是"大牌"（应该留着）
+function isBigPlay(cards, info) {
+    if (!info) return false;
+    if (info.type === 'single') {
+        return isBigSingle(cards[0]);
+    }
+    if (info.type === 'pair') {
+        const { normals } = analyzeCards(cards);
+        if (normals.length > 0) return isBigPair(normals[0].rank);
+        // 双王对
+        if (cards.every(c => c.suit === 'JOKER')) return true;
+        return false;
+    }
+    if (info.type === 'triple' || info.type === 'triple_pair') {
+        const { normals } = analyzeCards(cards);
+        if (normals.length > 0) {
+            const mainRank = normals[0].rank;
+            return isBigTriple(mainRank);
+        }
+        return false;
+    }
+    if (info.type === 'straight') {
+        return isBigStraight(info.level);
+    }
+    return false;
+}
+
+// 判断连对/钢板是不是"伪废牌"（外面大概率没有，且不大）
+function isPseudoWaste(cards, info) {
+    if (!info) return false;
+    if (info.type !== 'pair_straight' && info.type !== 'plate') return false;
+    // 检查这个牌型里有没有大牌
+    const { normals } = analyzeCards(cards);
+    // 如果是大牌对子/三条组成的，不算伪废牌
+    for (const c of normals) {
+        if (info.type === 'pair_straight' && isBigPair(c.rank)) return false;
+        if (info.type === 'plate' && isBigTriple(c.rank)) return false;
+    }
+    // 如果外面还有很多这种牌型，不确定，不算伪废牌
+    // 简化：假设外面已经出了至少 2 张同点数，才敢认为是伪废牌
+    // 这里简单返回 true（后续可以加记牌判断）
+    return true;
+}
+
+// 评估出这手牌后，剩余手牌价值
+function evaluatePlay(hand, cards) {
+    const ids = new Set(cards.map(c => c.id));
+    const rest = hand.filter(c => !ids.has(c.id));
+    return handValue(rest);
+}
+
+// AI 有牌权时的出牌选择
 function aiChooseBestLead(hand) {
     if (hand.length === 0) return null;
     const candidates = [];
@@ -915,7 +1072,7 @@ function aiChooseBestLead(hand) {
         count[c.rank] = (count[c.rank] || 0) + 1;
     }
 
-    // 单张（只取数量为 1 的，不拆对子）
+    // 单张候选（只取数量为 1 的）
     for (const r in count) {
         if (count[r] === 1) {
             const card = hand.find(c => c.rank === r && !isWild(c) && c.suit !== 'JOKER');
@@ -936,6 +1093,21 @@ function aiChooseBestLead(hand) {
             candidates.push({ cards, type: 'triple' });
         }
     }
+    // 三带二（葫芦）
+    for (const r3 in count) {
+        if (count[r3] >= 3) {
+            for (const r2 in count) {
+                if (r2 === r3) continue;
+                if (count[r2] >= 2) {
+                    const cards = [
+                        ...hand.filter(c => c.rank === r3 && !isWild(c)).slice(0, 3),
+                        ...hand.filter(c => c.rank === r2 && !isWild(c)).slice(0, 2),
+                    ];
+                    candidates.push({ cards, type: 'triple_pair' });
+                }
+            }
+        }
+    }
     // 顺子
     for (let start = 2; start <= 10; start++) {
         const cards = [];
@@ -954,19 +1126,39 @@ function aiChooseBestLead(hand) {
         return [sorted[0]];
     }
 
+    // 给每个候选打标签、评分
     for (const cand of candidates) {
-        const ids = new Set(cand.cards.map(c => c.id));
-        const rest = hand.filter(c => !ids.has(c.id));
-        cand.restValue = handValue(rest);
+        const info = identify(cand.cards);
+        cand.info = info;
+        cand.restValue = evaluatePlay(hand, cand.cards);
         cand.minValue = Math.min(...cand.cards.map(c => rankValue(c.rank)));
-        cand.typeBonus = cand.type === 'straight' ? 3 : cand.type === 'triple' ? 2 : cand.type === 'pair' ? 1 : 0;
+        cand.isWaste = isWastePlay(cand.cards, info);
+        cand.isBig = isBigPlay(cand.cards, info);
+        cand.isPseudo = isPseudoWaste(cand.cards, info);
+        // 优先葫芦
+        cand.isTriplePair = info && info.type === 'triple_pair';
     }
 
+    // 排序规则：
+    // 1. 伪废牌（连对/钢板，外面没有的）优先
+    // 2. 小废牌（小单张、小对子）
+    // 3. 葫芦（三带二）优先于对子三条
+    // 4. 中等牌
+    // 5. 大牌不要主动出（扣分）
     candidates.sort((a, b) => {
+        // 伪废牌优先
+        if (a.isPseudo !== b.isPseudo) return a.isPseudo ? -1 : 1;
+        // 小废牌优先
+        if (a.isWaste !== b.isWaste) return a.isWaste ? -1 : 1;
+        // 大牌扣分（不主动出）
+        if (a.isBig !== b.isBig) return a.isBig ? 1 : -1;
+        // 葫芦优先
+        if (a.isTriplePair !== b.isTriplePair) return a.isTriplePair ? -1 : 1;
+        // 其余按剩余手牌价值
         if (Math.abs(b.restValue - a.restValue) > 0.5) return b.restValue - a.restValue;
-        if (b.typeBonus !== a.typeBonus) return b.typeBonus - a.typeBonus;
         return a.minValue - b.minValue;
     });
+
     return candidates[0].cards;
 }
 
@@ -990,10 +1182,8 @@ function aiTurn() {
         } else {
             const hint = findHint(hand, lastInfo);
             if (hint && hint.length > 0) {
-                const ids = new Set(hint.map(c => c.id));
-                const rest = hand.filter(c => !ids.has(c.id));
                 const beforeValue = handValue(hand);
-                const afterValue = handValue(rest);
+                const afterValue = evaluatePlay(hand, hint);
                 const drop = beforeValue - afterValue;
                 const oppCardCount = G.hands[G.lastPlayer] ? G.hands[G.lastPlayer].length : 27;
                 const isUrgent = oppCardCount <= 5;
