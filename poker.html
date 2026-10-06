@@ -914,8 +914,11 @@ function findSameType(hand, lastInfo, seat) {
     const myTypes = getMyTypes(hand);
     const rankCount = {};
     for (const c of hand) rankCount[c.rank] = (rankCount[c.rank] || 0) + 1;
-    const canLead = [];
-    const cannotLead = [];
+
+    const smallMid = [];   // 中小牌
+    const bigCanLead = []; // 大牌 + 能争牌权
+    const bigCannotLead = []; // 大牌 + 不能争牌权
+
     for (const g of myTypes) {
         if (!g.info) continue;
         if (g.info.type !== type) continue;
@@ -940,17 +943,29 @@ function findSameType(hand, lastInfo, seat) {
                 if (!isSpecial(r) && rankCount[r] >= 4) continue;
             }
         }
-        if (canTakeLead(g.cards, seat)) canLead.push(g);
-        else cannotLead.push(g);
+
+        const isBig = isBigPlay(g.cards, g.info);
+        if (!isBig) {
+            smallMid.push(g);
+        } else {
+            if (canTakeLead(g.cards, seat)) bigCanLead.push(g);
+            else bigCannotLead.push(g);
+        }
     }
+
     const minVal = (g) => Math.min(...g.cards.map(c => rankValue(c.rank)));
-    if (canLead.length > 0) {
-        canLead.sort((a, b) => minVal(a) - minVal(b));
-        return canLead[0].cards;
+    if (smallMid.length > 0) {
+        smallMid.sort((a, b) => minVal(a) - minVal(b));
+        return smallMid[0].cards;
     }
-    if (cannotLead.length > 0) {
-        cannotLead.sort((a, b) => minVal(a) - minVal(b));
-        return cannotLead[0].cards;
+    if (bigCanLead.length > 0) {
+        bigCanLead.sort((a, b) => minVal(a) - minVal(b));
+        return bigCanLead[0].cards;
+    }
+    // 30% 概率出不能争牌权的大牌
+    if (bigCannotLead.length > 0 && Math.random() < 0.3) {
+        bigCannotLead.sort((a, b) => minVal(a) - minVal(b));
+        return bigCannotLead[0].cards;
     }
     return null;
 }
@@ -1082,20 +1097,8 @@ function aiTurn() {
             } else {
                 // 对手
                 const hint = findSameType(hand, lastInfo, p);
-                if (hint) {
-                    const hintInfo = identify(hint);
-                    if (hintInfo && !isBigPlay(hint, hintInfo)) {
-                        cards = hint;  // 中小牌直接压
-                    } else if (hintInfo) {
-                        if (canTakeLead(hint, p)) {
-                            cards = hint;
-                        } else {
-                            // 没牌权，30% 概率压
-                            if (Math.random() < 0.3) cards = hint;
-                        }
-                    }
-                }
-                // 对手过牌时出炸弹（更大）
+                if (hint) cards = hint;
+                // 对手过牌时出炸弹
                 if (!cards && ['bomb','flush_straight','four_kings'].includes(lastInfo.type)) {
                     const bigger = findBiggerBomb(hand, lastInfo);
                     if (bigger) cards = bigger;
