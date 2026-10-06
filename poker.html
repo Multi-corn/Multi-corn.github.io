@@ -227,7 +227,8 @@ function checkBomb(cards) {
     const ranks = new Set(normals.map(c => c.rank));
     if (ranks.size > 1) return null;
     const rank = normals.length > 0 ? normals[0].rank : LEVEL;
-    return { type: 'bomb', level: 400 + cards.length, cards, bombRank: rank, bombSize: cards.length };
+    const rankV = rankValue(rank);
+    return { type: 'bomb', level: 400 + cards.length * 100 + rankV, cards, bombRank: rank, bombSize: cards.length };
 }
 
 function checkSingle(cards) {
@@ -913,35 +914,45 @@ function findSameType(hand, lastInfo, seat) {
     const myTypes = getMyTypes(hand);
     const rankCount = {};
     for (const c of hand) rankCount[c.rank] = (rankCount[c.rank] || 0) + 1;
-    let best = null;
-    let bestVal = Infinity;
+    const canLead = [];
+    const cannotLead = [];
     for (const g of myTypes) {
         if (!g.info) continue;
         if (g.info.type !== type) continue;
         if (!canBeat(g.info, lastInfo)) continue;
-        // 排除拆牌（级牌除外）
+        // 排除拆牌（级牌、王除外）
+        const isSpecial = (r) => r === LEVEL || r === '大王' || r === '小王';
         if (type === 'single') {
             const card = g.cards[0];
-            if (card.rank !== LEVEL && rankCount[card.rank] >= 2) continue;
+            if (!isSpecial(card.rank) && rankCount[card.rank] >= 2) continue;
         }
         if (type === 'pair') {
             const { normals } = analyzeCards(g.cards);
             if (normals.length > 0) {
                 const r = normals[0].rank;
-                if (r !== LEVEL && rankCount[r] >= 3) continue;
+                if (!isSpecial(r) && rankCount[r] >= 3) continue;
             }
         }
         if (type === 'triple') {
             const { normals } = analyzeCards(g.cards);
             if (normals.length > 0) {
                 const r = normals[0].rank;
-                if (r !== LEVEL && rankCount[r] >= 4) continue;
+                if (!isSpecial(r) && rankCount[r] >= 4) continue;
             }
         }
-        const v = Math.min(...g.cards.map(c => rankValue(c.rank)));
-        if (v < bestVal) { bestVal = v; best = g; }
+        if (canTakeLead(g.cards, seat)) canLead.push(g);
+        else cannotLead.push(g);
     }
-    return best ? best.cards : null;
+    const minVal = (g) => Math.min(...g.cards.map(c => rankValue(c.rank)));
+    if (canLead.length > 0) {
+        canLead.sort((a, b) => minVal(a) - minVal(b));
+        return canLead[0].cards;
+    }
+    if (cannotLead.length > 0) {
+        cannotLead.sort((a, b) => minVal(a) - minVal(b));
+        return cannotLead[0].cards;
+    }
+    return null;
 }
 
 function findBiggerBomb(hand, lastInfo) {
