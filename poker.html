@@ -54,11 +54,7 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
     align-items: center;
 }
 .counterItem .mini-card.joker { color: #000; }
-.counterItem .left-num {
-    font-size: 11px;
-    color: #8ecae6;
-    margin-top: 2px;
-}
+.counterItem .left-num { font-size: 11px; color: #8ecae6; margin-top: 2px; }
 .counterItem .left-num.done { color: #555; }
 
 #table {
@@ -71,11 +67,7 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
     border: 2px solid #2a5a3a;
     margin-bottom: 8px;
 }
-.player {
-    position: absolute;
-    text-align: center;
-    font-size: 13px;
-}
+.player { position: absolute; text-align: center; font-size: 13px; }
 .player .name { color: #8ecae6; margin-bottom: 2px; }
 .player .count { color: #aaa; font-size: 12px; }
 .player .rank-tag { color: #f0c040; font-size: 12px; font-weight: bold; }
@@ -128,8 +120,6 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
     max-width: 900px;
     margin-bottom: 8px;
 }
-
-/* AI 手牌显示区（调试用） */
 #aiHands {
     width: 100%;
     max-width: 900px;
@@ -146,16 +136,8 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
     align-items: center;
     gap: 3px;
 }
-#aiHands .ai-label {
-    color: #8ecae6;
-    min-width: 70px;
-    font-weight: bold;
-}
-#aiHands .ai-row .card.small {
-    width: 34px;
-    height: 46px;
-    font-size: 12px;
-}
+#aiHands .ai-label { color: #8ecae6; min-width: 70px; font-weight: bold; }
+#aiHands .ai-row .card.small { width: 34px; height: 46px; font-size: 12px; }
 
 #controls {
     display: flex;
@@ -209,9 +191,7 @@ button.debug { background: #8a6a3a; color: #fff; }
     <div class="player" id="p0"><div class="name">我 <span class="rank-tag" id="r0"></span></div><div class="count" id="c0">27</div></div>
 </div>
 
-<!-- 调试：AI 手牌显示 -->
 <div id="aiHands"></div>
-
 <div id="myHand"></div>
 
 <div id="controls">
@@ -277,36 +257,6 @@ function isWild(card) {
     return card.suit === '♥' && card.rank === LEVEL;
 }
 
-// ==================== 大牌定义（按牌型） ====================
-// 单张大牌：王、级牌、A
-function isBigSingle(card) {
-    const v = rankValue(card.rank);
-    return v >= 14;  // A=14, 级牌=15, 王=16/17
-}
-// 对子大牌：王、级牌、A、K
-function isBigPair(rank) {
-    const v = rankValue(rank);
-    return v >= 13;  // K=13
-}
-// 三条/葫芦大牌：级牌、A、K、Q
-function isBigTriple(rank) {
-    const v = rankValue(rank);
-    return v >= 12;  // Q=12
-}
-// 顺子大牌：起点 >= 10（到Q、K、A）
-function isBigStraight(startLevel) {
-    return startLevel >= 10;
-}
-
-// 判断是不是小废牌（单张 < 7）
-function isSmallSingle(card) {
-    if (card.suit === 'JOKER') return false;
-    return rankValue(card.rank) <= 6;  // 2~6（级牌2也是小？但级牌特殊，不算）
-}
-function isSmallPair(rank) {
-    return rankValue(rank) <= 5;  // 对 3~5
-}
-
 // ==================== 牌型识别 ====================
 function analyzeCards(cards) {
     const wilds = cards.filter(isWild);
@@ -365,7 +315,7 @@ function checkSingle(cards) {
 
 function checkPair(cards) {
     if (cards.length !== 2) return null;
-    const { wilds, normals } = analyzeCards(cards);
+    const { normals } = analyzeCards(cards);
     if (normals.length === 2 && normals.every(c => c.suit === 'JOKER')) {
         if (normals[0].rank === normals[1].rank) {
             const v = normals[0].rank === '大王' ? 17 : 16;
@@ -382,7 +332,7 @@ function checkPair(cards) {
 
 function checkTriple(cards) {
     if (cards.length !== 3) return null;
-    const { wilds, normals } = analyzeCards(cards);
+    const { normals } = analyzeCards(cards);
     if (normals.some(c => c.suit === 'JOKER')) return null;
     const ranks = new Set(normals.map(c => c.rank));
     if (ranks.size > 1) return null;
@@ -486,10 +436,10 @@ function checkPlate(cards) {
 
 function identify(cards) {
     if (!cards || cards.length === 0) return null;
-    const fourKings = checkFourKings(cards);
-    if (fourKings) return fourKings;
-    const flush = checkFlushStraight(cards);
-    if (flush) return flush;
+    const fk = checkFourKings(cards);
+    if (fk) return fk;
+    const fs = checkFlushStraight(cards);
+    if (fs) return fs;
     const bomb = checkBomb(cards);
     if (bomb) return bomb;
     const n = cards.length;
@@ -537,22 +487,12 @@ const G = {
     finished: [],
     playedCards: [],
     newRoundStarter: null,
+    // 每家出过的点数记录（用于废牌判定）
+    playedRanks: [{}, {}, {}, {}],
 };
 
-// ==================== 记牌器 ====================
+// ==================== 记牌器（扣去自己手牌） ====================
 const COUNTER_ORDER = ['大王','小王','2','A','K','Q','J','10','9','8','7','6','5','4','3'];
-
-// 计算某个点数在外面还剩几张（用于 AI 估算）
-function remainingCount(rank) {
-    let total = (rank === '大王' || rank === '小王') ? 2 : 8;
-    let played = 0;
-    for (const c of G.playedCards) {
-        if (c.rank === rank) played++;
-    }
-    // 减去自己手里的（如果 rank 是自己有的）
-    // 注：这个函数用于估算“外面还剩几张”，不减去自己的
-    return total - played;
-}
 
 function renderCounter() {
     const el = document.getElementById('counter');
@@ -562,8 +502,13 @@ function renderCounter() {
     for (const c of G.playedCards) {
         played[c.rank] = (played[c.rank] || 0) + 1;
     }
+    // 自己手牌
+    const mine = {};
+    for (const c of G.hands[0]) {
+        mine[c.rank] = (mine[c.rank] || 0) + 1;
+    }
     el.innerHTML = COUNTER_ORDER.map(r => {
-        const left = total[r] - (played[r] || 0);
+        const left = total[r] - (played[r] || 0) - (mine[r] || 0);
         const cls = left === 0 ? 'left-num done' : 'left-num';
         let cardDisplay;
         if (r === '大王') cardDisplay = `<div class="mini-card joker">大<br>王</div>`;
@@ -571,6 +516,734 @@ function renderCounter() {
         else cardDisplay = `<div class="mini-card">${r}<br>♥</div>`;
         return `<div class="counterItem">${cardDisplay}<div class="${cls}">${left}</div></div>`;
     }).join('');
+}
+
+// 场外某点数剩余（扣去自己手牌）
+function remainingOutside(rank) {
+    let total = (rank === '大王' || rank === '小王') ? 2 : 8;
+    let played = 0;
+    for (const c of G.playedCards) if (c.rank === rank) played++;
+    let mine = 0;
+    for (const c of G.hands[0]) if (c.rank === rank) mine++;
+    return total - played - mine;
+}
+
+// 剩余未出完的人数（含自己）
+function remainingPlayers() {
+    return [0,1,2,3].filter(p => G.hands[p].length > 0).length;
+}
+
+// 剩余对手数（不含自己、不含队友）
+function remainingOpponents(mySeat) {
+    const teammate = (mySeat === 0 || mySeat === 2) ? (mySeat === 0 ? 2 : 0) : (mySeat === 1 ? 3 : 1);
+    return [0,1,2,3].filter(p => p !== mySeat && p !== teammate && G.hands[p].length > 0).length;
+}
+
+// ==================== 标签分类 ====================
+// 单张：小 ≤6，中 7~K，大 A/级牌/王
+function singleLevel(card) {
+    const v = rankValue(card.rank);
+    if (v >= 14) return 'big';
+    if (v <= 6) return 'small';
+    return 'mid';
+}
+// 对子：小 ≤5，中 6~10，大 K/A/级牌/王
+function pairLevel(rank) {
+    const v = rankValue(rank);
+    if (v >= 13) return 'big';
+    if (v <= 5) return 'small';
+    return 'mid';
+}
+// 三条：小 ≤5，中 6~J，大 Q/K/A/级牌
+function tripleLevel(rank) {
+    const v = rankValue(rank);
+    if (v >= 12) return 'big';
+    if (v <= 5) return 'small';
+    return 'mid';
+}
+// 葫芦按三条算
+// 顺子：小起点 ≤5，中 6~8，大 ≥9
+function straightLevel(start) {
+    if (start >= 9) return 'big';
+    if (start <= 5) return 'small';
+    return 'mid';
+}
+// 连对、钢板：小起点 ≤6，中 7~10，大 J 以上
+function chainLevel(start) {
+    if (start >= 11) return 'big';
+    if (start <= 6) return 'small';
+    return 'mid';
+}
+
+// ==================== 评分 ====================
+const SCORE_TABLE = {
+    single: { small: -5, mid: 0, big: 3 },
+    pair: { small: -5, mid: 0, big: 7 },
+    triple: { small: -3, mid: 1, big: 11 },
+    triple_pair: { small: -3, mid: 2, big: 16 },
+    straight: { small: -3, mid: 2, big: 11 },
+    pair_straight: { small: -2, mid: 4, big: 16 },
+    plate: { small: -2, mid: 4, big: 29 },
+};
+
+function bombScore(cards) {
+    const info = identify(cards);
+    if (info.type === 'four_kings') return 18;
+    if (info.type === 'flush_straight') return 50;
+    // bomb
+    const rank = info.bombRank;
+    const v = rankValue(rank);
+    if (v >= 11) return 45;
+    if (v >= 6) return 18;
+    return 12;
+}
+
+// 牌型基础分
+function playScore(cards) {
+    const info = identify(cards);
+    if (!info) return 0;
+    if (['bomb','flush_straight','four_kings'].includes(info.type)) {
+        return bombScore(cards);
+    }
+    if (info.type === 'single') {
+        return SCORE_TABLE.single[singleLevel(cards[0])];
+    }
+    if (info.type === 'pair') {
+        const { normals } = analyzeCards(cards);
+        const rank = normals.length > 0 ? normals[0].rank : LEVEL;
+        return SCORE_TABLE.pair[pairLevel(rank)];
+    }
+    if (info.type === 'triple') {
+        const { normals } = analyzeCards(cards);
+        const rank = normals.length > 0 ? normals[0].rank : LEVEL;
+        return SCORE_TABLE.triple[tripleLevel(rank)];
+    }
+    if (info.type === 'triple_pair') {
+        const { normals } = analyzeCards(cards);
+        const count = {};
+        for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+        let mainRank = LEVEL;
+        for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
+        return SCORE_TABLE.triple_pair[tripleLevel(mainRank)];
+    }
+    if (info.type === 'straight') {
+        return SCORE_TABLE.straight[straightLevel(info.level)];
+    }
+    if (info.type === 'pair_straight') {
+        return SCORE_TABLE.pair_straight[chainLevel(info.level)];
+    }
+    if (info.type === 'plate') {
+        return SCORE_TABLE.plate[chainLevel(info.level)];
+    }
+    return 0;
+}
+
+// ==================== 废牌判定 ====================
+// 判断一个牌型是不是废牌（别人大概率没有）
+function isWasteType(cards, info) {
+    if (!info) return false;
+    if (info.type !== 'pair_straight' && info.type !== 'plate') return false;
+    // 判断这个牌型需要哪些点数
+    // 连对：3 个连续对子，起点 start
+    // 钢板：2 个连续三条，起点 start
+    const { normals } = analyzeCards(cards);
+    const start = info.level;
+    const needRanks = [];
+    if (info.type === 'pair_straight') {
+        for (let i = 0; i < 3; i++) needRanks.push(RANKS[start + i - 2]);
+    } else {
+        for (let i = 0; i < 2; i++) needRanks.push(RANKS[start + i - 2]);
+    }
+    // 检查每个点数：场外剩余 ≥ 3（三条），且没有人出过该点数
+    for (const r of needRanks) {
+        const outside = remainingOutside(r);
+        if (outside < 3) return true;  // 这个点数凑不出三条，所以这个连对/钢板没人有
+        // 检查是否有人出过该点数
+        for (let p = 1; p < 4; p++) {
+            if (G.playedRanks[p][r]) {
+                // 有人出过该点数，他不可能再有该点数的三条
+            }
+        }
+    }
+    // 简化：如果每个点数都满足“场外 ≥ 3 且有人没出过”，则不是废牌
+    // 进一步：检查是否所有剩余对手都不可能凑出
+    // 这里用简化规则：只要有任何一个点数场外 < 3，就是废牌
+    return false;
+}
+
+// ==================== 划分与评分 ====================
+// 生成一手牌的所有可能划分（简化版：递归切分）
+function generatePartitions(hand) {
+    // 简化：只生成一些典型划分，不穷举
+    // 实际要穷举所有组合，但为了性能，我们用启发式
+    const partitions = [];
+    // 划分 1：炸弹优先
+    const p1 = partitionGreedy(hand, 'bomb_first');
+    if (p1) partitions.push(p1);
+    // 划分 2：连对/钢板优先
+    const p2 = partitionGreedy(hand, 'chain_first');
+    if (p2) partitions.push(p2);
+    // 划分 3：顺子优先
+    const p3 = partitionGreedy(hand, 'straight_first');
+    if (p3) partitions.push(p3);
+    // 划分 4：对子/三条优先
+    const p4 = partitionGreedy(hand, 'pair_first');
+    if (p4) partitions.push(p4);
+    // 划分 5：全单张
+    const p5 = hand.map(c => ({ cards: [c], info: identify([c]) }));
+    partitions.push(p5);
+    return partitions;
+}
+
+function partitionGreedy(hand, mode) {
+    // 简化：按指定优先级切分
+    // 这里实现一个简单的贪心切分
+    const used = new Set();
+    const groups = [];
+    const cards = [...hand];
+
+    // 先找炸弹
+    if (mode === 'bomb_first' || mode === 'pair_first') {
+        const byRank = {};
+        for (const c of cards) {
+            if (c.suit === 'JOKER' || isWild(c)) continue;
+            if (!byRank[c.rank]) byRank[c.rank] = [];
+            byRank[c.rank].push(c);
+        }
+        for (const r in byRank) {
+            if (byRank[r].length >= 4) {
+                const g = byRank[r].slice(0, 4);
+                g.forEach(c => used.add(c.id));
+                groups.push({ cards: g, info: identify(g) });
+            }
+        }
+    }
+
+    // 找连对/钢板
+    if (mode === 'chain_first' || mode === 'pair_first') {
+        // 简化：跳过
+    }
+
+    // 找顺子
+    if (mode === 'straight_first' || mode === 'pair_first') {
+        // 简化：跳过
+    }
+
+    // 剩下的牌
+    const rest = cards.filter(c => !used.has(c.id));
+    // 按点数分组
+    const byRank2 = {};
+    for (const c of rest) {
+        if (!byRank2[c.rank]) byRank2[c.rank] = [];
+        byRank2[c.rank].push(c);
+    }
+    for (const r in byRank2) {
+        const group = byRank2[r];
+        while (group.length >= 3) {
+            const g = group.splice(0, 3);
+            const info = identify(g);
+            if (info) groups.push({ cards: g, info });
+            else break;
+        }
+        while (group.length >= 2) {
+            const g = group.splice(0, 2);
+            const info = identify(g);
+            if (info) groups.push({ cards: g, info });
+            else break;
+        }
+        while (group.length >= 1) {
+            const g = group.splice(0, 1);
+            const info = identify(g);
+            if (info) groups.push({ cards: g, info });
+        }
+    }
+    return groups;
+}
+
+// 计算划分总分
+function partitionScore(partition) {
+    let score = 0;
+    let smallPair = 0, bigPair = 0;
+    let smallTriple = 0, bigTriple = 0;
+    let smallTriplePair = 0, bigTriplePair = 0;
+    for (const g of partition) {
+        let s = playScore(g.cards);
+        // 废牌判定
+        if (isWasteType(g.cards, g.info)) {
+            s = 0;
+        }
+        score += s;
+        // 统计对子/三条/葫芦大小
+        if (g.info && g.info.type === 'pair') {
+            const lv = pairLevel(g.info.cards[0].rank);
+            if (lv === 'small') smallPair++;
+            if (lv === 'big') bigPair++;
+        }
+        if (g.info && g.info.type === 'triple') {
+            const { normals } = analyzeCards(g.cards);
+            const rank = normals.length > 0 ? normals[0].rank : LEVEL;
+            const lv = tripleLevel(rank);
+            if (lv === 'small') smallTriple++;
+            if (lv === 'big') bigTriple++;
+        }
+        if (g.info && g.info.type === 'triple_pair') {
+            const { normals } = analyzeCards(g.cards);
+            const count = {};
+            for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+            let mainRank = LEVEL;
+            for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
+            const lv = tripleLevel(mainRank);
+            if (lv === 'small') smallTriplePair++;
+            if (lv === 'big') bigTriplePair++;
+        }
+    }
+    // 对应加分
+    score += Math.min(smallPair, bigPair) * 2;
+    score += Math.min(smallTriple, bigTriple) * 2;
+    score += Math.min(smallTriplePair, bigTriplePair) * 3;
+    return score;
+}
+
+// 获取“自己有的牌型”（最高分 ± 4 内所有划分里的牌型去重）
+function getMyTypes(hand) {
+    const partitions = generatePartitions(hand);
+    const scores = partitions.map(p => partitionScore(p));
+    const maxScore = Math.max(...scores);
+    const threshold = maxScore - 4;
+    const types = new Map();  // key: 牌型签名, value: { cards, info }
+    for (let i = 0; i < partitions.length; i++) {
+        if (scores[i] < threshold) continue;
+        for (const g of partitions[i]) {
+            if (!g.info) continue;
+            const sig = g.cards.map(c => c.id).sort().join(',');
+            if (!types.has(sig)) types.set(sig, g);
+        }
+    }
+    return [...types.values()];
+}
+
+// ==================== 牌权判断 ====================
+// 单张：外面有没有更大的
+function canTakeLeadSingle(card) {
+    const v = rankValue(card.rank);
+    for (const r of ['大王','小王',LEVEL,'A']) {
+        if (rankValue(r) > v && remainingOutside(r) > 0) return false;
+    }
+    // 检查所有比它大的点数
+    for (const r of RANKS) {
+        if (rankValue(r) > v && remainingOutside(r) > 0) return false;
+    }
+    return true;
+}
+
+// 对子：按场外剩余 + 人数
+function canTakeLeadPair(cards) {
+    const { normals } = analyzeCards(cards);
+    const rank = normals.length > 0 ? normals[0].rank : LEVEL;
+    const v = rankValue(rank);
+    const oppCount = remainingOpponents(0);  // 简化为按 0 号座位算
+
+    let score = 0;
+    for (const r of RANKS) {
+        if (rankValue(r) <= v) continue;
+        const outside = remainingOutside(r);
+        if (outside >= 4) return false;  // 直接没牌权
+        if (outside === 2 || outside === 3) {
+            if (oppCount <= 2) return false;  // 只剩两个对手或更少，2/3 张也没牌权
+            score += 1;
+        }
+    }
+    if (oppCount <= 2) {
+        // 只剩两个对手，只有 0/1 才有牌权
+        return score === 0;
+    }
+    return score < 2;
+}
+
+// 三条/葫芦：概率
+function canTakeLeadTriple(mainRank) {
+    const v = rankValue(mainRank);
+    // 比它大的点数
+    const biggerRanks = [];
+    for (const r of RANKS) {
+        if (rankValue(r) > v) biggerRanks.push(r);
+    }
+    if (rankValue(LEVEL) > v) biggerRanks.push(LEVEL);
+    if (17 > v) biggerRanks.push('大王');
+    if (16 > v) biggerRanks.push('小王');
+
+    const M = remainingPlayers() - 1;  // 除我以外的人数（含队友）
+    const oppRatio = remainingOpponents(0) / Math.max(1, M);
+
+    let noLeadProb = 1;
+    for (const r of biggerRanks) {
+        const outside = remainingOutside(r);
+        if (outside < 3) continue;
+        // 算至少一人拿到 ≥3 张的概率
+        const p = probAtLeast3(outside, M);
+        noLeadProb *= (1 - p);
+    }
+    const leadProb = 1 - noLeadProb;
+    // 队友修正
+    const adjusted = 1 - (1 - leadProb) * oppRatio;
+    return adjusted > 0.7;
+}
+
+// N 张牌分给 M 人，至少一人拿到 ≥ 3 张的概率
+function probAtLeast3(N, M) {
+    if (N < 3) return 0;
+    // 用互补：所有人 ≤ 2 张
+    // 动态规划
+    // dp[i][j] = 前 i 人分 j 张牌，每人 ≤ 2 的方案数
+    // 总方案数 M^N
+    const dp = Array.from({length: M + 1}, () => new Array(N + 1).fill(0));
+    dp[0][0] = 1;
+    for (let i = 1; i <= M; i++) {
+        for (let j = 0; j <= N; j++) {
+            for (let k = 0; k <= 2 && k <= j; k++) {
+                dp[i][j] += dp[i-1][j-k] * comb(N - (j - k), k);
+            }
+        }
+    }
+    // 这个 DP 不对，重新用简单方法
+    // 简化：用二项式分布近似
+    // 每人拿到 ≥3 张的概率 ≈ 1 - P(所有人 ≤2)
+    // 对于 N 张牌，M 人，每人 ≤2 的概率
+    // 用枚举所有分配方式太复杂，这里用近似
+    // 假设每人期望 N/M 张
+    // 用泊松近似
+    return 1 - Math.pow(probAtMost2(N, M), 1);
+}
+
+function probAtMost2(N, M) {
+    // 近似：每人分 N/M 张，超过 2 的概率
+    // 这里用简化公式
+    if (N <= 2 * M) {
+        // 有可能所有人 ≤2
+        // 精确计算太复杂，用近似
+        return Math.exp(-Math.pow(Math.max(0, N - 2*M), 2) / (2 * M));
+    }
+    return 0;
+}
+
+function comb(n, k) {
+    if (k < 0 || k > n) return 0;
+    let r = 1;
+    for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+    return r;
+}
+
+// 顺子/连对/钢板：大、中默认有牌权，小默认无
+function canTakeLeadChain(cards) {
+    const info = identify(cards);
+    if (!info) return false;
+    if (info.type === 'straight') return straightLevel(info.level) !== 'small';
+    if (info.type === 'pair_straight' || info.type === 'plate') return chainLevel(info.level) !== 'small';
+    return false;
+}
+
+// 通用牌权判断
+function canTakeLead(cards) {
+    const info = identify(cards);
+    if (!info) return false;
+    if (['bomb','flush_straight','four_kings'].includes(info.type)) return true;
+    if (info.type === 'single') return canTakeLeadSingle(cards[0]);
+    if (info.type === 'pair') return canTakeLeadPair(cards);
+    if (info.type === 'triple') {
+        const { normals } = analyzeCards(cards);
+        const rank = normals.length > 0 ? normals[0].rank : LEVEL;
+        return canTakeLeadTriple(rank);
+    }
+    if (info.type === 'triple_pair') {
+        const { normals } = analyzeCards(cards);
+        const count = {};
+        for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+        let mainRank = LEVEL;
+        for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
+        return canTakeLeadTriple(mainRank);
+    }
+    if (info.type === 'straight' || info.type === 'pair_straight' || info.type === 'plate') {
+        return canTakeLeadChain(cards);
+    }
+    return false;
+}
+
+// ==================== 出牌优先级 ====================
+function getPlayPriority(g, hand) {
+    const info = g.info;
+    if (!info) return 99;
+    // 废牌
+    if (isWasteType(g.cards, info)) return 1;
+    // 大牌
+    const isBig = isBigPlay(g.cards, info);
+    // 小/中
+    let level = 'mid';
+    if (info.type === 'single') level = singleLevel(g.cards[0]);
+    else if (info.type === 'pair') {
+        const { normals } = analyzeCards(g.cards);
+        level = pairLevel(normals.length > 0 ? normals[0].rank : LEVEL);
+    }
+    else if (info.type === 'triple') {
+        const { normals } = analyzeCards(g.cards);
+        level = tripleLevel(normals.length > 0 ? normals[0].rank : LEVEL);
+    }
+    else if (info.type === 'triple_pair') {
+        const { normals } = analyzeCards(g.cards);
+        const count = {};
+        for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+        let mainRank = LEVEL;
+        for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
+        level = tripleLevel(mainRank);
+    }
+    else if (info.type === 'straight') level = straightLevel(info.level);
+    else if (info.type === 'pair_straight' || info.type === 'plate') level = chainLevel(info.level);
+
+    // 有对应大牌判断
+    const hasCounterpart = checkCounterpart(g, hand);
+
+    if (isBig) return 6;
+    if (level === 'small') {
+        return hasCounterpart ? 2 : 3;
+    }
+    if (level === 'mid') {
+        return hasCounterpart ? 4 : 5;
+    }
+    return 6;
+}
+
+function isBigPlay(cards, info) {
+    if (!info) return false;
+    if (info.type === 'single') return singleLevel(cards[0]) === 'big';
+    if (info.type === 'pair') {
+        const { normals } = analyzeCards(cards);
+        return pairLevel(normals.length > 0 ? normals[0].rank : LEVEL) === 'big';
+    }
+    if (info.type === 'triple') {
+        const { normals } = analyzeCards(cards);
+        return tripleLevel(normals.length > 0 ? normals[0].rank : LEVEL) === 'big';
+    }
+    if (info.type === 'triple_pair') {
+        const { normals } = analyzeCards(cards);
+        const count = {};
+        for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+        let mainRank = LEVEL;
+        for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
+        return tripleLevel(mainRank) === 'big';
+    }
+    if (info.type === 'straight') return straightLevel(info.level) === 'big';
+    if (info.type === 'pair_straight' || info.type === 'plate') return chainLevel(info.level) === 'big';
+    return false;
+}
+
+function checkCounterpart(g, hand) {
+    // 检查手里有没有同牌型的大牌
+    const info = g.info;
+    if (!info) return false;
+    // 简化：只检查对子、三条、葫芦、连对、钢板
+    const type = info.type;
+    for (const c of hand) {
+        // 检查是否有同牌型的大牌组合（简化：不精确）
+        // 这里只做一个粗略判断：如果手牌里有同类型的大牌点数，返回 true
+    }
+    return false;  // 简化实现
+}
+
+// ==================== 出牌时选择 ====================
+function aiChooseBestLead(hand) {
+    if (hand.length === 0) return null;
+    const myTypes = getMyTypes(hand);
+    if (myTypes.length === 0) {
+        const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
+        return [sorted[0]];
+    }
+    // 按优先级排序
+    for (const g of myTypes) {
+        g._priority = getPlayPriority(g, hand);
+    }
+    myTypes.sort((a, b) => {
+        if (a._priority !== b._priority) return a._priority - b._priority;
+        // 同优先级，内部顺序：连对/钢板 > 顺子 > 葫芦 > 单张 > 对子 > 三条
+        const order = { plate: 0, pair_straight: 0, straight: 1, triple_pair: 2, single: 3, pair: 4, triple: 5 };
+        const oa = order[a.info.type] ?? 99;
+        const ob = order[b.info.type] ?? 99;
+        if (oa !== ob) return oa - ob;
+        // 点数小的优先
+        const va = Math.min(...a.cards.map(c => rankValue(c.rank)));
+        const vb = Math.min(...b.cards.map(c => rankValue(c.rank)));
+        return va - vb;
+    });
+    return myTypes[0].cards;
+}
+
+// ==================== 找牌（跟牌用） ====================
+function findHint(hand, lastInfo) {
+    if (lastInfo) {
+        const same = findSameType(hand, lastInfo);
+        if (same) return same;
+        const bomb = findBiggerBomb(hand, lastInfo);
+        if (bomb) return bomb;
+        return null;
+    }
+    if (hand.length === 0) return null;
+    const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
+    return [sorted[0]];
+}
+
+function findSameType(hand, lastInfo) {
+    const type = lastInfo.type;
+    const level = lastInfo.level;
+    const myTypes = getMyTypes(hand);
+    // 从记录里找同类型、能压过、且最小的
+    let best = null;
+    let bestVal = Infinity;
+    for (const g of myTypes) {
+        if (!g.info) continue;
+        if (g.info.type !== type) continue;
+        if (!canBeat(g.info, lastInfo)) continue;
+        const v = Math.min(...g.cards.map(c => rankValue(c.rank)));
+        if (v < bestVal) { bestVal = v; best = g; }
+    }
+    return best ? best.cards : null;
+}
+
+function findBiggerBomb(hand, lastInfo) {
+    const myTypes = getMyTypes(hand);
+    let best = null;
+    let bestLevel = Infinity;
+    for (const g of myTypes) {
+        if (!g.info) continue;
+        if (!['bomb','flush_straight','four_kings'].includes(g.info.type)) continue;
+        if (!canBeat(g.info, lastInfo)) continue;
+        if (g.info.level < bestLevel) { bestLevel = g.info.level; best = g; }
+    }
+    return best ? best.cards : null;
+}
+
+// ==================== 炸弹时机判断 ====================
+function shouldUseBomb(hand, context) {
+    // context: { type: 'pass'|'lead', lastPlayer, oppCount }
+    const myTypes = getMyTypes(hand);
+    const bombs = myTypes.filter(g => g.info && ['bomb','flush_straight','four_kings'].includes(g.info.type));
+    if (bombs.length === 0) return null;
+    // 从小到大
+    bombs.sort((a, b) => a.info.level - b.info.level);
+    return bombs[0].cards;
+}
+
+// ==================== AI 回合 ====================
+function aiTurn() {
+    if (!G.playing) return;
+    const p = G.currentPlayer;
+    if (p === 0) return;
+    const hand = G.hands[p];
+    if (hand.length === 0) {
+        advanceTurn();
+        return;
+    }
+    const lastInfo = G.lastPlay ? G.lastPlay.info : null;
+
+    let cards = null;
+
+    if (!lastInfo) {
+        // 出牌时
+        // 检查炸弹时机（主动）
+        // 4. 主动出牌时没别的牌出了
+        const myTypes = getMyTypes(hand);
+        const nonBombTypes = myTypes.filter(g => g.info && !['bomb','flush_straight','four_kings'].includes(g.info.type));
+        if (nonBombTypes.length === 0) {
+            cards = shouldUseBomb(hand, { type: 'lead' });
+        } else {
+            cards = aiChooseBestLead(hand);
+        }
+    } else {
+        // 过牌时
+        const lastPlayer = G.lastPlayer;
+        const isTeammate = (p === 2 && lastPlayer === 0) || (p === 0 && lastPlayer === 2) ||
+                          (p === 1 && lastPlayer === 3) || (p === 3 && lastPlayer === 1);
+
+        // 炸弹时机判断
+        // 1. 对手连续出 10 张以上（简化：看 passCount 是否一直为 0）
+        // 2. 上家出完剩 6 张
+        // 3. 上家出完剩 1 张
+        // 4. 下家出完剩 1 张（对家没炸、上家不炸）
+        // 5. 下家出完剩 6 张
+        const lastHandCount = G.hands[lastPlayer] ? G.hands[lastPlayer].length : 0;
+
+        // 检查是否需要用炸弹
+        let bombReason = null;
+        if (lastPlayer === (p + 3) % 4) {
+            // 上家
+            if (lastHandCount === 6) bombReason = '上家剩6张';
+            if (lastHandCount === 1) bombReason = '上家剩1张';
+        } else if (lastPlayer === (p + 1) % 4) {
+            // 下家
+            if (lastHandCount === 6 || lastHandCount === 1) bombReason = '下家剩6/1张';
+        }
+
+        if (bombReason) {
+            const bomb = shouldUseBomb(hand, { type: 'pass' });
+            if (bomb) {
+                // 下家情况：对家先判断
+                if (lastPlayer === (p + 1) % 4) {
+                    // 对家已经 pass 了才会轮到我（简化：假设对家已 pass）
+                }
+                cards = bomb;
+            }
+        }
+
+        if (!cards) {
+            // 队友处理
+            if (isTeammate) {
+                const teammateBig = lastInfo && isBigPlay(G.lastPlay.cards, lastInfo);
+                if (teammateBig && canTakeLead(G.lastPlay.cards)) {
+                    // 队友大牌能拿牌权，不出
+                    cards = null;
+                } else {
+                    // 队友中小牌，中小牌能压就压
+                    const hint = findSameType(hand, lastInfo);
+                    if (hint) {
+                        const hintInfo = identify(hint);
+                        if (hintInfo && !isBigPlay(hint, hintInfo)) {
+                            cards = hint;
+                        }
+                    }
+                }
+            } else {
+                // 对手
+                const hint = findSameType(hand, lastInfo);
+                if (hint) {
+                    const hintInfo = identify(hint);
+                    if (hintInfo && !isBigPlay(hint, hintInfo)) {
+                        // 中小牌直接压
+                        cards = hint;
+                    } else if (hintInfo) {
+                        // 大牌判断牌权
+                        if (canTakeLead(hint)) {
+                            cards = hint;
+                        }
+                    }
+                }
+                // 如果上家出炸弹
+                if (!cards && ['bomb','flush_straight','four_kings'].includes(lastInfo.type)) {
+                    const bigger = findBiggerBomb(hand, lastInfo);
+                    if (bigger) cards = bigger;
+                }
+            }
+        }
+    }
+
+    if (cards && cards.length > 0) {
+        const info = identify(cards);
+        if (info) {
+            playCards(p, cards, info);
+            if (!G.playing) return;
+            advanceTurn();
+            return;
+        }
+    }
+    pass(p);
+    if (!G.playing) return;
+    advanceTurn();
 }
 
 // ==================== UI ====================
@@ -625,7 +1298,6 @@ function renderPlayArea() {
     el.innerHTML = G.lastPlay.cards.map(c => cardHTML(c, true)).join('');
 }
 
-// 调试：显示 3 个 AI 的手牌
 function renderAiHands() {
     const el = document.getElementById('aiHands');
     let html = '';
@@ -647,7 +1319,7 @@ function log(msg, cls = '') {
     el.scrollTop = el.scrollHeight;
 }
 
-// ==================== 发牌 ====================
+// ==================== 游戏流程 ====================
 function deal() {
     const deck = shuffle(makeDeck());
     for (let i = 0; i < 4; i++) G.hands[i] = [];
@@ -664,6 +1336,7 @@ function deal() {
     G.selected.clear();
     G.finished = [];
     G.playedCards = [];
+    G.playedRanks = [{}, {}, {}, {}];
     G.newRoundStarter = null;
     G.playing = true;
     renderHand();
@@ -676,7 +1349,15 @@ function deal() {
     updateControls();
 }
 
-// ==================== 出牌 ====================
+function playerName(p) {
+    return ['我', 'AI 左', 'AI 对家', 'AI 右'][p];
+}
+
+function cardName(c) {
+    if (c.suit === 'JOKER') return c.rank;
+    return c.suit + c.rank;
+}
+
 function getSelectedCards() {
     return G.hands[0].filter(c => G.selected.has(c.id));
 }
@@ -684,7 +1365,10 @@ function getSelectedCards() {
 function playCards(player, cards, info) {
     const ids = new Set(cards.map(c => c.id));
     G.hands[player] = G.hands[player].filter(c => !ids.has(c.id));
-    for (const c of cards) G.playedCards.push(c);
+    for (const c of cards) {
+        G.playedCards.push(c);
+        G.playedRanks[player][c.rank] = (G.playedRanks[player][c.rank] || 0) + 1;
+    }
     G.lastPlay = { player, cards, info };
     G.lastPlayer = player;
     G.passCount = 0;
@@ -700,15 +1384,6 @@ function playCards(player, cards, info) {
         log(`${playerName(player)} 第 ${G.finished.length} 名出完！`, 'sys');
     }
     checkGameOver();
-}
-
-function playerName(p) {
-    return ['我', 'AI 左', 'AI 对家', 'AI 右'][p];
-}
-
-function cardName(c) {
-    if (c.suit === 'JOKER') return c.rank;
-    return c.suit + c.rank;
 }
 
 function pass(player) {
@@ -728,13 +1403,9 @@ function checkGameOver() {
         finishGame();
         return;
     }
-    const teamA = [0, 2];
-    const teamB = [1, 3];
-    const doneA = teamA.filter(p => G.hands[p].length === 0).length;
-    const doneB = teamB.filter(p => G.hands[p].length === 0).length;
-    if (doneA === 2 || doneB === 2) {
-        finishGame();
-    }
+    const doneA = [0, 2].filter(p => G.hands[p].length === 0).length;
+    const doneB = [1, 3].filter(p => G.hands[p].length === 0).length;
+    if (doneA === 2 || doneB === 2) finishGame();
 }
 
 function finishGame() {
@@ -743,12 +1414,9 @@ function finishGame() {
     remaining.sort((a,b) => G.hands[a].length - G.hands[b].length);
     G.finished = G.finished.concat(remaining);
     renderRanks();
-
     const names = G.finished.map((p, i) => `${i+1}. ${playerName(p)}`).join('  ');
     log(`本局结束：${names}`, 'sys');
-
-    const first = G.finished[0];
-    const second = G.finished[1];
+    const first = G.finished[0], second = G.finished[1];
     const teamOf = p => (p === 0 || p === 2) ? 'A' : 'B';
     if (teamOf(first) === teamOf(second)) {
         log(`🎉 双下！${teamOf(first) === 'A' ? '我方' : '对方'}赢了`, 'sys');
@@ -758,7 +1426,38 @@ function finishGame() {
     updateControls();
 }
 
-// ==================== 我的操作 ====================
+function updateControls() {
+    const myTurn = G.playing && G.currentPlayer === 0 && G.hands[0].length > 0;
+    document.getElementById('playBtn').disabled = !myTurn;
+    document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay;
+    document.getElementById('hintBtn').disabled = !myTurn;
+    document.getElementById('nextBtn').disabled = !G.playing || G.currentPlayer === 0;
+}
+
+function advanceTurn() {
+    if (!G.playing) return;
+    let next;
+    if (G.newRoundStarter !== null) {
+        next = G.newRoundStarter;
+        G.newRoundStarter = null;
+        if (G.hands[next].length === 0) {
+            let count = 0;
+            do { next = (next + 1) % 4; count++; }
+            while (G.hands[next].length === 0 && count < 4);
+        }
+    } else {
+        next = (G.currentPlayer + 1) % 4;
+        let count = 0;
+        while (G.hands[next].length === 0 && count < 4) {
+            next = (next + 1) % 4;
+            count++;
+        }
+    }
+    G.currentPlayer = next;
+    updateControls();
+}
+
+// ==================== 按钮 ====================
 document.getElementById('playBtn').onclick = () => {
     if (!G.playing || G.currentPlayer !== 0) return;
     const cards = getSelectedCards();
@@ -795,10 +1494,9 @@ document.getElementById('hintBtn').onclick = () => {
     log(`提示：${hint.map(cardName).join(' ')}`, 'sys');
 };
 
-// 调试：AI 下一步
 document.getElementById('nextBtn').onclick = () => {
     if (!G.playing) return;
-    if (G.currentPlayer === 0) { log('轮到你出牌，不能按 AI 下一步', 'sys'); return; }
+    if (G.currentPlayer === 0) { log('轮到你出牌', 'sys'); return; }
     aiTurn();
 };
 
@@ -806,417 +1504,6 @@ document.getElementById('restartBtn').onclick = () => {
     document.getElementById('log').innerHTML = '';
     deal();
 };
-
-function updateControls() {
-    const myTurn = G.playing && G.currentPlayer === 0 && G.hands[0].length > 0;
-    document.getElementById('playBtn').disabled = !myTurn;
-    document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay;
-    document.getElementById('hintBtn').disabled = !myTurn;
-    document.getElementById('nextBtn').disabled = !G.playing || G.currentPlayer === 0;
-}
-
-function advanceTurn() {
-    if (!G.playing) return;
-    let next;
-    if (G.newRoundStarter !== null) {
-        next = G.newRoundStarter;
-        G.newRoundStarter = null;
-        if (G.hands[next].length === 0) {
-            let count = 0;
-            do {
-                next = (next + 1) % 4;
-                count++;
-            } while (G.hands[next].length === 0 && count < 4);
-        }
-    } else {
-        next = (G.currentPlayer + 1) % 4;
-        let count = 0;
-        while (G.hands[next].length === 0 && count < 4) {
-            next = (next + 1) % 4;
-            count++;
-        }
-    }
-    G.currentPlayer = next;
-    updateControls();
-    // 调试模式：不再自动触发 AI，改为手动点"AI 下一步"
-}
-
-// ==================== 找牌 ====================
-function findHint(hand, lastInfo) {
-    if (lastInfo) {
-        const same = findSameType(hand, lastInfo);
-        if (same) return same;
-        const bomb = findBomb(hand, lastInfo);
-        if (bomb) return bomb;
-        return null;
-    }
-    if (hand.length === 0) return null;
-    const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
-    return [sorted[0]];
-}
-
-function findSameType(hand, lastInfo) {
-    const type = lastInfo.type;
-    const level = lastInfo.level;
-    const normals = hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
-    const wilds = hand.filter(isWild);
-
-    if (type === 'single') {
-        const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
-        for (const c of sorted) {
-            if (rankValue(c.rank) > level) return [c];
-        }
-        return null;
-    }
-    if (type === 'pair') {
-        const byRank = groupByRank(normals);
-        const ranks = Object.keys(byRank).sort((a,b) => rankValue(a) - rankValue(b));
-        for (const rank of ranks) {
-            if (byRank[rank].length >= 2 && rankValue(rank) > level) {
-                return byRank[rank].slice(0, 2);
-            }
-        }
-        if (wilds.length >= 1) {
-            for (const rank of ranks) {
-                if (byRank[rank].length >= 1 && rankValue(rank) > level) {
-                    return [byRank[rank][0], wilds[0]];
-                }
-            }
-        }
-        const jokers = hand.filter(c => c.suit === 'JOKER');
-        const big = jokers.filter(c => c.rank === '大王');
-        const small = jokers.filter(c => c.rank === '小王');
-        if (big.length >= 2 && 17 > level) return [big[0], big[1]];
-        if (small.length >= 2 && 16 > level) return [small[0], small[1]];
-        return null;
-    }
-    if (type === 'triple') {
-        const byRank = groupByRank(normals);
-        const ranks = Object.keys(byRank).sort((a,b) => rankValue(a) - rankValue(b));
-        for (const rank of ranks) {
-            if (byRank[rank].length >= 3 && rankValue(rank) > level) {
-                return byRank[rank].slice(0, 3);
-            }
-            if (byRank[rank].length >= 2 && wilds.length >= 1 && rankValue(rank) > level) {
-                return [byRank[rank][0], byRank[rank][1], wilds[0]];
-            }
-        }
-        return null;
-    }
-    return null;
-}
-
-function groupByRank(cards) {
-    const g = {};
-    for (const c of cards) {
-        if (c.suit === 'JOKER') continue;
-        if (!g[c.rank]) g[c.rank] = [];
-        g[c.rank].push(c);
-    }
-    return g;
-}
-
-function findBomb(hand, lastInfo) {
-    const normals = hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
-    const byRank = groupByRank(normals);
-    for (const rank in byRank) {
-        if (byRank[rank].length >= 4) {
-            const cards = byRank[rank].slice(0, 4);
-            const info = identify(cards);
-            if (info && info.type === 'bomb' && canBeat(info, lastInfo)) return cards;
-        }
-    }
-    const jokers = hand.filter(c => c.suit === 'JOKER');
-    const big = jokers.filter(c => c.rank === '大王');
-    const small = jokers.filter(c => c.rank === '小王');
-    if (big.length >= 2 && small.length >= 2) {
-        const cards = [big[0], big[1], small[0], small[1]];
-        const info = identify(cards);
-        if (info && canBeat(info, lastInfo)) return cards;
-    }
-    return null;
-}
-
-// ==================== 手牌价值评估 ====================
-function handValue(hand) {
-    if (hand.length === 0) return 1000;
-    let score = 0;
-
-    const count = {};
-    const jokers = { big: 0, small: 0 };
-    const wilds = [];
-    for (const c of hand) {
-        if (c.suit === 'JOKER') {
-            if (c.rank === '大王') jokers.big++;
-            else jokers.small++;
-            continue;
-        }
-        if (isWild(c)) { wilds.push(c); continue; }
-        count[c.rank] = (count[c.rank] || 0) + 1;
-    }
-
-    let pairs = 0, triples = 0, bombs = 0;
-    for (const r in count) {
-        const n = count[r];
-        if (n >= 4) bombs++;
-        else if (n === 3) triples++;
-        else if (n === 2) pairs++;
-    }
-    score += pairs * 2 + triples * 4 + bombs * 10;
-
-    const ranks = Object.keys(count).map(r => rankValueForStraight(r)).sort((a,b)=>a-b);
-    let straights = 0;
-    for (let start = 2; start <= 10; start++) {
-        let ok = true;
-        for (let i = 0; i < 5; i++) {
-            if (!ranks.includes(start + i)) { ok = false; break; }
-        }
-        if (ok) straights++;
-    }
-    score += straights * 5;
-
-    let singles = 0;
-    for (const r in count) {
-        if (count[r] === 1) singles++;
-    }
-    score -= singles * 2;
-
-    let bigCards = 0;
-    for (const r in count) {
-        if (r === LEVEL) bigCards += count[r];
-        if (r === 'A') bigCards += count[r];
-    }
-    bigCards += jokers.big * 3 + jokers.small * 2;
-    score += bigCards * 1.5;
-
-    score += wilds.length * 6;
-    score += (27 - hand.length) * 0.5;
-
-    return score;
-}
-
-// ==================== AI 主动出牌（分层优先级） ====================
-// 判断这手牌是不是"小废牌"
-function isWastePlay(cards, info) {
-    if (!info) return false;
-    if (info.type === 'single') {
-        return isSmallSingle(cards[0]);
-    }
-    if (info.type === 'pair') {
-        const { normals } = analyzeCards(cards);
-        if (normals.length > 0) return isSmallPair(normals[0].rank);
-        return false;
-    }
-    return false;
-}
-
-// 判断这手牌是不是"大牌"（应该留着）
-function isBigPlay(cards, info) {
-    if (!info) return false;
-    if (info.type === 'single') {
-        return isBigSingle(cards[0]);
-    }
-    if (info.type === 'pair') {
-        const { normals } = analyzeCards(cards);
-        if (normals.length > 0) return isBigPair(normals[0].rank);
-        // 双王对
-        if (cards.every(c => c.suit === 'JOKER')) return true;
-        return false;
-    }
-    if (info.type === 'triple' || info.type === 'triple_pair') {
-        const { normals } = analyzeCards(cards);
-        if (normals.length > 0) {
-            const mainRank = normals[0].rank;
-            return isBigTriple(mainRank);
-        }
-        return false;
-    }
-    if (info.type === 'straight') {
-        return isBigStraight(info.level);
-    }
-    return false;
-}
-
-// 判断连对/钢板是不是"伪废牌"（外面大概率没有，且不大）
-function isPseudoWaste(cards, info) {
-    if (!info) return false;
-    if (info.type !== 'pair_straight' && info.type !== 'plate') return false;
-    // 检查这个牌型里有没有大牌
-    const { normals } = analyzeCards(cards);
-    // 如果是大牌对子/三条组成的，不算伪废牌
-    for (const c of normals) {
-        if (info.type === 'pair_straight' && isBigPair(c.rank)) return false;
-        if (info.type === 'plate' && isBigTriple(c.rank)) return false;
-    }
-    // 如果外面还有很多这种牌型，不确定，不算伪废牌
-    // 简化：假设外面已经出了至少 2 张同点数，才敢认为是伪废牌
-    // 这里简单返回 true（后续可以加记牌判断）
-    return true;
-}
-
-// 评估出这手牌后，剩余手牌价值
-function evaluatePlay(hand, cards) {
-    const ids = new Set(cards.map(c => c.id));
-    const rest = hand.filter(c => !ids.has(c.id));
-    return handValue(rest);
-}
-
-// AI 有牌权时的出牌选择
-function aiChooseBestLead(hand) {
-    if (hand.length === 0) return null;
-    const candidates = [];
-
-    const count = {};
-    for (const c of hand) {
-        if (c.suit === 'JOKER' || isWild(c)) continue;
-        count[c.rank] = (count[c.rank] || 0) + 1;
-    }
-
-    // 单张候选（只取数量为 1 的）
-    for (const r in count) {
-        if (count[r] === 1) {
-            const card = hand.find(c => c.rank === r && !isWild(c) && c.suit !== 'JOKER');
-            if (card) candidates.push({ cards: [card], type: 'single' });
-        }
-    }
-    // 对子
-    for (const r in count) {
-        if (count[r] === 2) {
-            const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
-            candidates.push({ cards, type: 'pair' });
-        }
-    }
-    // 三条
-    for (const r in count) {
-        if (count[r] >= 3) {
-            const cards = hand.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
-            candidates.push({ cards, type: 'triple' });
-        }
-    }
-    // 三带二（葫芦）
-    for (const r3 in count) {
-        if (count[r3] >= 3) {
-            for (const r2 in count) {
-                if (r2 === r3) continue;
-                if (count[r2] >= 2) {
-                    const cards = [
-                        ...hand.filter(c => c.rank === r3 && !isWild(c)).slice(0, 3),
-                        ...hand.filter(c => c.rank === r2 && !isWild(c)).slice(0, 2),
-                    ];
-                    candidates.push({ cards, type: 'triple_pair' });
-                }
-            }
-        }
-    }
-    // 顺子
-    for (let start = 2; start <= 10; start++) {
-        const cards = [];
-        let ok = true;
-        for (let i = 0; i < 5; i++) {
-            const rankStr = RANKS[start + i - 2];
-            const found = hand.find(c => c.rank === rankStr && !isWild(c) && c.suit !== 'JOKER' && !cards.includes(c));
-            if (found) cards.push(found);
-            else { ok = false; break; }
-        }
-        if (ok) candidates.push({ cards, type: 'straight' });
-    }
-
-    if (candidates.length === 0) {
-        const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
-        return [sorted[0]];
-    }
-
-    // 给每个候选打标签、评分
-    for (const cand of candidates) {
-        const info = identify(cand.cards);
-        cand.info = info;
-        cand.restValue = evaluatePlay(hand, cand.cards);
-        cand.minValue = Math.min(...cand.cards.map(c => rankValue(c.rank)));
-        cand.isWaste = isWastePlay(cand.cards, info);
-        cand.isBig = isBigPlay(cand.cards, info);
-        cand.isPseudo = isPseudoWaste(cand.cards, info);
-        // 优先葫芦
-        cand.isTriplePair = info && info.type === 'triple_pair';
-    }
-
-    // 排序规则：
-    // 1. 伪废牌（连对/钢板，外面没有的）优先
-    // 2. 小废牌（小单张、小对子）
-    // 3. 葫芦（三带二）优先于对子三条
-    // 4. 中等牌
-    // 5. 大牌不要主动出（扣分）
-    candidates.sort((a, b) => {
-        // 伪废牌优先
-        if (a.isPseudo !== b.isPseudo) return a.isPseudo ? -1 : 1;
-        // 小废牌优先
-        if (a.isWaste !== b.isWaste) return a.isWaste ? -1 : 1;
-        // 大牌扣分（不主动出）
-        if (a.isBig !== b.isBig) return a.isBig ? 1 : -1;
-        // 葫芦优先
-        if (a.isTriplePair !== b.isTriplePair) return a.isTriplePair ? -1 : 1;
-        // 其余按剩余手牌价值
-        if (Math.abs(b.restValue - a.restValue) > 0.5) return b.restValue - a.restValue;
-        return a.minValue - b.minValue;
-    });
-
-    return candidates[0].cards;
-}
-
-// ==================== AI ====================
-function aiTurn() {
-    if (!G.playing) return;
-    const p = G.currentPlayer;
-    if (p === 0) return;
-    const hand = G.hands[p];
-    if (hand.length === 0) {
-        advanceTurn();
-        return;
-    }
-    const lastInfo = G.lastPlay ? G.lastPlay.info : null;
-    let cards = null;
-    if (lastInfo) {
-        const isTeammate = (p === 2 && G.lastPlayer === 0) || (p === 0 && G.lastPlayer === 2) ||
-                          (p === 1 && G.lastPlayer === 3) || (p === 3 && G.lastPlayer === 1);
-        if (isTeammate) {
-            cards = null;
-        } else {
-            const hint = findHint(hand, lastInfo);
-            if (hint && hint.length > 0) {
-                const beforeValue = handValue(hand);
-                const afterValue = evaluatePlay(hand, hint);
-                const drop = beforeValue - afterValue;
-                const oppCardCount = G.hands[G.lastPlayer] ? G.hands[G.lastPlayer].length : 27;
-                const isUrgent = oppCardCount <= 5;
-                if (isUrgent || drop < 8) {
-                    cards = hint;
-                } else {
-                    cards = null;
-                }
-            } else {
-                cards = null;
-            }
-            // 对手快出完，用炸弹
-            if (G.hands[G.lastPlayer] && G.hands[G.lastPlayer].length <= 3) {
-                const bomb = findBomb(hand, lastInfo);
-                if (bomb) cards = bomb;
-            }
-        }
-    } else {
-        cards = aiChooseBestLead(hand);
-    }
-    if (cards && cards.length > 0) {
-        const info = identify(cards);
-        if (info) {
-            playCards(p, cards, info);
-            if (!G.playing) return;
-            advanceTurn();
-            return;
-        }
-    }
-    pass(p);
-    if (!G.playing) return;
-    advanceTurn();
-}
 
 // ==================== 启动 ====================
 deal();
