@@ -102,6 +102,8 @@ button.debug { background: #8a6a3a; color: #fff; }
 }
 #log .my { color: #8ecae6; }
 #log .sys { color: #f0c040; }
+#actionPanel { margin-bottom: 8px; }
+#actionPanel button { margin: 3px; }
 </style>
 </head>
 <body>
@@ -116,6 +118,7 @@ button.debug { background: #8a6a3a; color: #fff; }
 </div>
 <div id="aiHands"></div>
 <div id="myHand"></div>
+<div id="actionPanel"></div>
 <div id="controls">
     <button id="playBtn">出牌</button>
     <button id="passBtn" class="sec">不出</button>
@@ -189,7 +192,7 @@ function checkFourKings(cards) {
     if (jokers.length !== 4) return null;
     const big = jokers.filter(c => c.rank === '大王').length;
     const small = jokers.filter(c => c.rank === '小王').length;
-    if (big === 2 && small === 2) return { type: 'four_kings', level: 800, cards };
+    if (big === 2 && small === 2) return { type: 'four_kings', level: 2000, cards };
     return null;
 }
 
@@ -211,7 +214,7 @@ function checkFlushStraight(cards) {
             needCopy.splice(idx, 1);
         }
         if (ok && needCopy.length === wilds.length) {
-            return { type: 'flush_straight', level: 500 + start, cards };
+            return { type: 'flush_straight', level: 950 + start, cards };
         }
     }
     return null;
@@ -274,11 +277,33 @@ function checkTriplePair(cards) {
             let need2 = 2 - count[r2];
             if (need3 < 0 || need2 < 0) continue;
             if (need3 + need2 === wilds.length) {
-                return { type: 'triple_pair', level: rankValue(r3), cards };
+                return { type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2 };
             }
         }
     }
     return null;
+}
+
+function checkTriplePairAll(cards) {
+    if (cards.length !== 5) return [];
+    const { wilds, normals } = analyzeCards(cards);
+    if (normals.some(c => c.suit === 'JOKER')) return [];
+    const count = {};
+    for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+    const ranks = Object.keys(count);
+    const results = [];
+    for (const r3 of ranks) {
+        for (const r2 of ranks) {
+            if (r3 === r2) continue;
+            let need3 = 3 - count[r3];
+            let need2 = 2 - count[r2];
+            if (need3 < 0 || need2 < 0) continue;
+            if (need3 + need2 === wilds.length) {
+                results.push({ type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2 });
+            }
+        }
+    }
+    return results;
 }
 
 function checkStraight(cards) {
@@ -381,6 +406,32 @@ function identify(cards) {
         return null;
     }
     return null;
+}
+
+function identifyAll(cards) {
+    const results = [];
+    const n = cards.length;
+    if (n === 1) { const r = checkSingle(cards); if (r) results.push(r); }
+    if (n === 2) { const r = checkPair(cards); if (r) results.push(r); }
+    if (n === 3) { const r = checkTriple(cards); if (r) results.push(r); }
+    if (n === 5) {
+        results.push(...checkTriplePairAll(cards));
+        const st = checkStraight(cards); if (st) results.push(st);
+    }
+    if (n === 6) {
+        const ps = checkPairStraight(cards); if (ps) results.push(ps);
+        const pl = checkPlate(cards); if (pl) results.push(pl);
+    }
+    const fk = checkFourKings(cards); if (fk) results.push(fk);
+    const fs = checkFlushStraight(cards); if (fs) results.push(fs);
+    const bomb = checkBomb(cards); if (bomb) results.push(bomb);
+    const seen = new Set();
+    return results.filter(r => {
+        const key = r.type + '_' + r.level + (r.mainRank || '') + (r.pairRank || '');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 function canBeat(a, b) {
@@ -692,6 +743,59 @@ function getMyTypes(hand, seat) {
             if (!g.info) continue;
             const sig = g.cards.map(c => c.id).sort().join(',');
             if (!types.has(sig)) types.set(sig, g);
+
+            // 葫芦：额外记录三条和对子
+            if (g.info.type === 'triple_pair') {
+                const { normals } = analyzeCards(g.cards);
+                const count = {};
+                for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+                const tripleCards = [], pairCards = [];
+                for (const r in count) {
+                    if (count[r] >= 3) {
+                        const cs = g.cards.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
+                        tripleCards.push(...cs);
+                    } else if (count[r] >= 2) {
+                        const cs = g.cards.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
+                        pairCards.push(...cs);
+                    }
+                }
+                if (tripleCards.length === 3) {
+                    const tsig = tripleCards.map(c => c.id).sort().join(',');
+                    if (!types.has(tsig)) types.set(tsig, { cards: tripleCards, info: identify(tripleCards) });
+                }
+                if (pairCards.length === 2) {
+                    const psig = pairCards.map(c => c.id).sort().join(',');
+                    if (!types.has(psig)) types.set(psig, { cards: pairCards, info: identify(pairCards) });
+                }
+            }
+
+            // 王对/级牌对：额外记录单张
+            if (g.info.type === 'pair') {
+                const { normals } = analyzeCards(g.cards);
+                if (normals.length === 2 && normals[0].rank === normals[1].rank) {
+                    const r = normals[0].rank;
+                    if (r === '大王' || r === '小王' || r === LEVEL) {
+                        for (const card of g.cards) {
+                            const ssig = String(card.id);
+                            if (!types.has(ssig)) types.set(ssig, { cards: [card], info: identify([card]) });
+                        }
+                    }
+                }
+            }
+
+            // 三条（王/级牌）：额外记录单张
+            if (g.info.type === 'triple') {
+                const { normals } = analyzeCards(g.cards);
+                if (normals.length > 0) {
+                    const r = normals[0].rank;
+                    if (r === '大王' || r === '小王' || r === LEVEL) {
+                        for (const card of g.cards) {
+                            const ssig = String(card.id);
+                            if (!types.has(ssig)) types.set(ssig, { cards: [card], info: identify([card]) });
+                        }
+                    }
+                }
+            }
         }
     }
     return [...types.values()];
@@ -1265,17 +1369,63 @@ function advanceTurn() {
     updateControls();
 }
 
+function showTypeSelect(cards, allInfos) {
+    const panel = document.getElementById('actionPanel');
+    let html = '<h2 style="font-size:14px;color:#8b949e;margin-bottom:6px">选择牌型</h2>';
+    for (let i = 0; i < allInfos.length; i++) {
+        const info = allInfos[i];
+        const canPlay = !G.lastPlay || canBeat(info, G.lastPlay.info);
+        const label = typeName(info) + (canPlay ? '' : '（压不过）');
+        html += `<button class="typeBtn" data-idx="${i}" ${canPlay ? '' : 'disabled'}>${label}</button>`;
+    }
+    html += `<button class="sec" id="cancelTypeBtn">取消</button>`;
+    panel.innerHTML = html;
+    panel.querySelectorAll('.typeBtn').forEach(btn => {
+        btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx);
+            const info = allInfos[idx];
+            G.selected.clear();
+            panel.innerHTML = '';
+            playCards(0, cards, info);
+            if (!G.playing) return;
+            advanceTurn();
+        };
+    });
+    document.getElementById('cancelTypeBtn').onclick = () => {
+        panel.innerHTML = '';
+        updateControls();
+    };
+}
+
+function typeName(info) {
+    const names = {
+        single: '单张', pair: '对子', triple: '三条', triple_pair: '葫芦',
+        straight: '顺子', pair_straight: '连对', plate: '钢板',
+        bomb: '炸弹', flush_straight: '同花顺', four_kings: '天王炸'
+    };
+    let name = names[info.type] || info.type;
+    if (info.type === 'triple_pair' && info.mainRank) name += `（三条${info.mainRank}）`;
+    if (info.type === 'bomb') name += `（${info.bombSize}张${info.bombRank}）`;
+    return name;
+}
+
 document.getElementById('playBtn').onclick = () => {
     if (!G.playing || G.currentPlayer !== 0) return;
     const cards = getSelectedCards();
     if (cards.length === 0) { log('请先选牌', 'sys'); return; }
-    const info = identify(cards);
-    if (!info) { log('牌型不合法', 'sys'); return; }
-    if (G.lastPlay && !canBeat(info, G.lastPlay.info)) { log('压不过上家', 'sys'); return; }
-    G.selected.clear();
-    playCards(0, cards, info);
-    if (!G.playing) return;
-    advanceTurn();
+    const allInfos = identifyAll(cards);
+    if (allInfos.length === 0) { log('牌型不合法', 'sys'); return; }
+
+    if (allInfos.length === 1) {
+        const info = allInfos[0];
+        if (G.lastPlay && !canBeat(info, G.lastPlay.info)) { log('压不过上家', 'sys'); return; }
+        G.selected.clear();
+        playCards(0, cards, info);
+        if (!G.playing) return;
+        advanceTurn();
+    } else {
+        showTypeSelect(cards, allInfos);
+    }
 };
 
 document.getElementById('passBtn').onclick = () => {
