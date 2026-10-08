@@ -6,46 +6,15 @@
 <title>掼蛋 · 简化单机版（调试）</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    font-family: "Microsoft YaHei", Arial, sans-serif;
-    background: #1a3a2a;
-    color: #eee;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px;
-    user-select: none;
-}
+body { font-family: "Microsoft YaHei", Arial, sans-serif; background: #1a3a2a; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 8px; user-select: none; }
 h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
-#counter {
-    width: 100%;
-    max-width: 900px;
-    background: rgba(10, 31, 18, 0.95);
-    border: 1px solid #2a5a3a;
-    border-radius: 8px;
-    padding: 4px 6px;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 3px;
-}
+#counter { width: 100%; max-width: 900px; background: rgba(10, 31, 18, 0.95); border: 1px solid #2a5a3a; border-radius: 8px; padding: 4px 6px; margin-bottom: 8px; display: flex; justify-content: center; flex-wrap: wrap; gap: 3px; }
 .counterItem { display: flex; flex-direction: column; align-items: center; min-width: 30px; }
-.counterItem .mini-card {
-    width: 26px; height: 34px; background: #fff; color: #d00;
-    border-radius: 3px; border: 1px solid #999; font-size: 12px;
-    font-weight: bold; line-height: 1.1; display: flex;
-    flex-direction: column; justify-content: center; align-items: center;
-}
+.counterItem .mini-card { width: 26px; height: 34px; background: #fff; color: #d00; border-radius: 3px; border: 1px solid #999; font-size: 12px; font-weight: bold; line-height: 1.1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 .counterItem .mini-card.joker { color: #000; }
 .counterItem .left-num { font-size: 11px; color: #8ecae6; margin-top: 2px; }
 .counterItem .left-num.done { color: #555; }
-#table {
-    position: relative; width: 100%; max-width: 900px; height: 420px;
-    background: #0f2a1c; border-radius: 12px; border: 2px solid #2a5a3a;
-    margin-bottom: 8px;
-}
+#table { position: relative; width: 100%; max-width: 900px; height: 420px; background: #0f2a1c; border-radius: 12px; border: 2px solid #2a5a3a; margin-bottom: 8px; }
 .player { position: absolute; text-align: center; font-size: 13px; }
 .player .name { color: #8ecae6; margin-bottom: 2px; }
 .player .count { color: #aaa; font-size: 12px; }
@@ -54,55 +23,27 @@ h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
 #p1 { left: 8px; top: 50%; transform: translateY(-50%); }
 #p2 { top: 8px; left: 50%; transform: translateX(-50%); }
 #p3 { right: 8px; top: 50%; transform: translateY(-50%); }
-.playArea {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    min-width: 200px; min-height: 80px;
-    display: flex; flex-wrap: wrap; justify-content: center;
-    align-items: center; gap: 4px;
-}
-.card {
-    display: inline-block; width: 40px; height: 56px;
-    background: #fff; color: #000; border-radius: 5px;
-    border: 1px solid #999; font-size: 14px; font-weight: bold;
-    line-height: 1.1; padding: 3px; position: relative;
-    cursor: pointer; transition: transform 0.1s;
-}
+.playArea { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 200px; min-height: 80px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
+.card { display: inline-block; width: 40px; height: 56px; background: #fff; color: #000; border-radius: 5px; border: 1px solid #999; font-size: 14px; font-weight: bold; line-height: 1.1; padding: 3px; position: relative; cursor: pointer; transition: transform 0.1s; }
 .card.red { color: #d00; }
 .card.small { width: 30px; height: 42px; font-size: 11px; padding: 2px; }
 .card.selected { transform: translateY(-12px); box-shadow: 0 0 8px #f0c040; }
 .card .suit { font-size: 16px; }
-#myHand {
-    display: flex; flex-wrap: wrap; justify-content: center;
-    gap: 3px; min-height: 70px; padding: 5px;
-    background: #0a1f12; border-radius: 8px;
-    width: 100%; max-width: 900px; margin-bottom: 8px;
-}
-#aiHands {
-    width: 100%; max-width: 900px; background: #0a1f12;
-    border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; font-size: 13px;
-}
+#myHand { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; min-height: 70px; padding: 5px; background: #0a1f12; border-radius: 8px; width: 100%; max-width: 900px; margin-bottom: 8px; }
+#aiHands { width: 100%; max-width: 900px; background: #0a1f12; border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; font-size: 13px; }
 #aiHands .ai-row { margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
 #aiHands .ai-label { color: #8ecae6; min-width: 70px; font-weight: bold; }
 #aiHands .ai-row .card.small { width: 34px; height: 46px; font-size: 12px; }
 #controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-button {
-    padding: 8px 18px; font-size: 15px; border: none; border-radius: 6px;
-    background: #f0c040; color: #1a3a2a; font-weight: bold;
-    cursor: pointer; font-family: inherit;
-}
+button { padding: 8px 18px; font-size: 15px; border: none; border-radius: 6px; background: #f0c040; color: #1a3a2a; font-weight: bold; cursor: pointer; font-family: inherit; }
 button:hover { opacity: 0.85; }
 button:disabled { background: #555; color: #999; cursor: not-allowed; }
 button.sec { background: #4a7a5a; color: #fff; }
 button.debug { background: #8a6a3a; color: #fff; }
-#log {
-    width: 100%; max-width: 900px; height: 60px; overflow-y: auto;
-    background: #0a1f12; border-radius: 8px; padding: 6px 10px;
-    font-size: 12px; line-height: 1.6; color: #aaa; margin-top: 8px;
-}
+#log { width: 100%; max-width: 900px; height: 60px; overflow-y: auto; background: #0a1f12; border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 1.6; color: #aaa; margin-top: 8px; }
 #log .my { color: #8ecae6; }
 #log .sys { color: #f0c040; }
-#actionPanel { margin-bottom: 8px; }
+#actionPanel { margin-bottom: 8px; text-align: center; }
 #actionPanel button { margin: 3px; }
 </style>
 </head>
@@ -143,7 +84,6 @@ function rankValue(rank) {
     if (rank === 'A') return 14;
     return parseInt(rank);
 }
-
 function rankValueForStraight(rank) {
     if (rank === 'J') return 11;
     if (rank === 'Q') return 12;
@@ -152,39 +92,26 @@ function rankValueForStraight(rank) {
     if (rank === '小王' || rank === '大王') return 100;
     return parseInt(rank);
 }
-
 let cardIdCounter = 0;
 function makeDeck() {
     const deck = [];
     for (let d = 0; d < 2; d++) {
-        for (const suit of SUITS) {
-            for (const rank of RANKS) {
-                deck.push({ suit, rank, id: cardIdCounter++ });
-            }
-        }
+        for (const suit of SUITS) for (const rank of RANKS) deck.push({ suit, rank, id: cardIdCounter++ });
         deck.push({ suit: 'JOKER', rank: '小王', id: cardIdCounter++ });
         deck.push({ suit: 'JOKER', rank: '大王', id: cardIdCounter++ });
     }
     return deck;
 }
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function isWild(card) { return card.suit === '♥' && card.rank === LEVEL; }
+function analyzeCards(cards) { const wilds = cards.filter(isWild); const normals = cards.filter(c => !isWild(c)); return { wilds, normals }; }
 
-function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
+// ==================== 牌型识别（支持赖子） ====================
+// 牌型识别时，赖子可以当任意牌（点数+花色）
 
-function isWild(card) {
-    return card.suit === '♥' && card.rank === LEVEL;
-}
-
-function analyzeCards(cards) {
-    const wilds = cards.filter(isWild);
-    const normals = cards.filter(c => !isWild(c));
-    return { wilds, normals };
-}
+// 判断一手牌能否组成某牌型（考虑赖子）
+// 返回 { type, level, cards, wildAssign } 或 null
+// wildAssign: 赖子当的牌 [{cardId, rank, suit}]
 
 function checkFourKings(cards) {
     if (cards.length !== 4) return null;
@@ -200,12 +127,14 @@ function checkFlushStraight(cards) {
     if (cards.length !== 5) return null;
     const { wilds, normals } = analyzeCards(cards);
     if (normals.some(c => c.suit === 'JOKER')) return null;
+    if (normals.length === 0) return null;
     const suits = new Set(normals.map(c => c.suit));
     if (suits.size > 1) return null;
+    const suit = normals[0].suit;
     const values = normals.map(c => rankValueForStraight(c.rank)).sort((a,b)=>a-b);
+    // 枚举顺子起点
     for (let start = 2; start <= 10; start++) {
-        const need = [];
-        for (let i = 0; i < 5; i++) need.push(start + i);
+        const need = []; for (let i = 0; i < 5; i++) need.push(start + i);
         const needCopy = [...need];
         let ok = true;
         for (const v of values) {
@@ -214,7 +143,8 @@ function checkFlushStraight(cards) {
             needCopy.splice(idx, 1);
         }
         if (ok && needCopy.length === wilds.length) {
-            return { type: 'flush_straight', level: 950 + start, cards };
+            const wildAssign = wilds.map((w, i) => ({ cardId: w.id, rank: RANKS[needCopy[i] - 2], suit }));
+            return { type: 'flush_straight', level: 950 + start, cards, wildAssign };
         }
     }
     return null;
@@ -222,13 +152,14 @@ function checkFlushStraight(cards) {
 
 function checkBomb(cards) {
     if (cards.length < 4) return null;
-    const { normals } = analyzeCards(cards);
+    const { wilds, normals } = analyzeCards(cards);
     if (normals.some(c => c.suit === 'JOKER')) return null;
     const ranks = new Set(normals.map(c => c.rank));
     if (ranks.size > 1) return null;
     const rank = normals.length > 0 ? normals[0].rank : LEVEL;
     const rankV = rankValue(rank);
-    return { type: 'bomb', level: 400 + cards.length * 100 + rankV, cards, bombRank: rank, bombSize: cards.length };
+    const wildAssign = wilds.map(w => ({ cardId: w.id, rank, suit: w.suit }));
+    return { type: 'bomb', level: 400 + cards.length * 100 + rankV, cards, bombRank: rank, bombSize: cards.length, wildAssign };
 }
 
 function checkSingle(cards) {
@@ -238,7 +169,7 @@ function checkSingle(cards) {
 
 function checkPair(cards) {
     if (cards.length !== 2) return null;
-    const { normals } = analyzeCards(cards);
+    const { wilds, normals } = analyzeCards(cards);
     if (normals.length === 2 && normals.every(c => c.suit === 'JOKER')) {
         if (normals[0].rank === normals[1].rank) {
             const v = normals[0].rank === '大王' ? 17 : 16;
@@ -249,18 +180,27 @@ function checkPair(cards) {
     if (normals.some(c => c.suit === 'JOKER')) return null;
     const ranks = new Set(normals.map(c => c.rank));
     if (ranks.size > 1) return null;
-    const rank = normals.length > 0 ? normals[0].rank : LEVEL;
-    return { type: 'pair', level: rankValue(rank), cards };
+    if (normals.length === 0) {
+        // 两张都是赖子，当对子（当级牌）
+        return { type: 'pair', level: rankValue(LEVEL), cards };
+    }
+    const rank = normals[0].rank;
+    const wildAssign = wilds.map(w => ({ cardId: w.id, rank, suit: w.suit }));
+    return { type: 'pair', level: rankValue(rank), cards, wildAssign };
 }
 
 function checkTriple(cards) {
     if (cards.length !== 3) return null;
-    const { normals } = analyzeCards(cards);
+    const { wilds, normals } = analyzeCards(cards);
     if (normals.some(c => c.suit === 'JOKER')) return null;
     const ranks = new Set(normals.map(c => c.rank));
     if (ranks.size > 1) return null;
-    const rank = normals.length > 0 ? normals[0].rank : LEVEL;
-    return { type: 'triple', level: rankValue(rank), cards };
+    if (normals.length === 0) {
+        return { type: 'triple', level: rankValue(LEVEL), cards };
+    }
+    const rank = normals[0].rank;
+    const wildAssign = wilds.map(w => ({ cardId: w.id, rank, suit: w.suit }));
+    return { type: 'triple', level: rankValue(rank), cards, wildAssign };
 }
 
 function checkTriplePair(cards) {
@@ -277,7 +217,10 @@ function checkTriplePair(cards) {
             let need2 = 2 - count[r2];
             if (need3 < 0 || need2 < 0) continue;
             if (need3 + need2 === wilds.length) {
-                return { type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2 };
+                const wildAssign = [];
+                for (let i = 0; i < need3; i++) wildAssign.push({ cardId: wilds[i].id, rank: r3, suit: wilds[i].suit });
+                for (let i = 0; i < need2; i++) wildAssign.push({ cardId: wilds[need3 + i].id, rank: r2, suit: wilds[need3 + i].suit });
+                return { type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2, wildAssign };
             }
         }
     }
@@ -299,7 +242,10 @@ function checkTriplePairAll(cards) {
             let need2 = 2 - count[r2];
             if (need3 < 0 || need2 < 0) continue;
             if (need3 + need2 === wilds.length) {
-                results.push({ type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2 });
+                const wildAssign = [];
+                for (let i = 0; i < need3; i++) wildAssign.push({ cardId: wilds[i].id, rank: r3, suit: wilds[i].suit });
+                for (let i = 0; i < need2; i++) wildAssign.push({ cardId: wilds[need3 + i].id, rank: r2, suit: wilds[need3 + i].suit });
+                results.push({ type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2, wildAssign });
             }
         }
     }
@@ -313,8 +259,7 @@ function checkStraight(cards) {
     const values = normals.map(c => rankValueForStraight(c.rank));
     if (new Set(values).size !== values.length) return null;
     for (let start = 2; start <= 10; start++) {
-        const need = [];
-        for (let i = 0; i < 5; i++) need.push(start + i);
+        const need = []; for (let i = 0; i < 5; i++) need.push(start + i);
         const needCopy = [...need];
         let ok = true;
         for (const v of values) {
@@ -323,7 +268,8 @@ function checkStraight(cards) {
             needCopy.splice(idx, 1);
         }
         if (ok && needCopy.length === wilds.length) {
-            return { type: 'straight', level: start, cards };
+            const wildAssign = wilds.map((w, i) => ({ cardId: w.id, rank: RANKS[needCopy[i] - 2], suit: w.suit }));
+            return { type: 'straight', level: start, cards, wildAssign };
         }
     }
     return null;
@@ -339,16 +285,19 @@ function checkPairStraight(cards) {
         const need = [start, start+1, start+2];
         let wildsLeft = wilds.length;
         let ok = true;
+        const assign = [];
         for (const r of need) {
             const rankStr = RANKS[r - 2];
             const have = count[rankStr] || 0;
             if (have > 2) { ok = false; break; }
             const needWild = 2 - have;
             if (needWild > wildsLeft) { ok = false; break; }
+            for (let i = 0; i < needWild; i++) assign.push({ rank: rankStr });
             wildsLeft -= needWild;
         }
         if (ok && wildsLeft === 0) {
-            return { type: 'pair_straight', level: start, cards };
+            const wildAssign = wilds.map((w, i) => ({ cardId: w.id, rank: assign[i].rank, suit: w.suit }));
+            return { type: 'pair_straight', level: start, cards, wildAssign };
         }
     }
     return null;
@@ -364,16 +313,19 @@ function checkPlate(cards) {
         const need = [start, start+1];
         let wildsLeft = wilds.length;
         let ok = true;
+        const assign = [];
         for (const r of need) {
             const rankStr = RANKS[r - 2];
             const have = count[rankStr] || 0;
             if (have > 3) { ok = false; break; }
             const needWild = 3 - have;
             if (needWild > wildsLeft) { ok = false; break; }
+            for (let i = 0; i < needWild; i++) assign.push({ rank: rankStr });
             wildsLeft -= needWild;
         }
         if (ok && wildsLeft === 0) {
-            return { type: 'plate', level: start, cards };
+            const wildAssign = wilds.map((w, i) => ({ cardId: w.id, rank: assign[i].rank, suit: w.suit }));
+            return { type: 'plate', level: start, cards, wildAssign };
         }
     }
     return null;
@@ -381,30 +333,15 @@ function checkPlate(cards) {
 
 function identify(cards) {
     if (!cards || cards.length === 0) return null;
-    const fk = checkFourKings(cards);
-    if (fk) return fk;
-    const fs = checkFlushStraight(cards);
-    if (fs) return fs;
-    const bomb = checkBomb(cards);
-    if (bomb) return bomb;
+    const fk = checkFourKings(cards); if (fk) return fk;
+    const fs = checkFlushStraight(cards); if (fs) return fs;
+    const bomb = checkBomb(cards); if (bomb) return bomb;
     const n = cards.length;
     if (n === 1) return checkSingle(cards);
     if (n === 2) return checkPair(cards);
     if (n === 3) return checkTriple(cards);
-    if (n === 5) {
-        const tp = checkTriplePair(cards);
-        if (tp) return tp;
-        const st = checkStraight(cards);
-        if (st) return st;
-        return null;
-    }
-    if (n === 6) {
-        const ps = checkPairStraight(cards);
-        if (ps) return ps;
-        const pl = checkPlate(cards);
-        if (pl) return pl;
-        return null;
-    }
+    if (n === 5) { const tp = checkTriplePair(cards); if (tp) return tp; const st = checkStraight(cards); if (st) return st; return null; }
+    if (n === 6) { const ps = checkPairStraight(cards); if (ps) return ps; const pl = checkPlate(cards); if (pl) return pl; return null; }
     return null;
 }
 
@@ -490,44 +427,17 @@ function remainingOutside(rank, seat) {
     for (const c of G.hands[seat]) if (c.rank === rank) mine++;
     return total - played - mine;
 }
-
-function remainingPlayers() {
-    return [0,1,2,3].filter(p => G.hands[p].length > 0).length;
-}
-
+function remainingPlayers() { return [0,1,2,3].filter(p => G.hands[p].length > 0).length; }
 function remainingOpponents(mySeat) {
     const teammate = (mySeat === 0 || mySeat === 2) ? (mySeat === 0 ? 2 : 0) : (mySeat === 1 ? 3 : 1);
     return [0,1,2,3].filter(p => p !== mySeat && p !== teammate && G.hands[p].length > 0).length;
 }
 
-function singleLevel(card) {
-    const v = rankValue(card.rank);
-    if (v >= 14) return 'big';
-    if (v <= 6) return 'small';
-    return 'mid';
-}
-function pairLevel(rank) {
-    const v = rankValue(rank);
-    if (v >= 13) return 'big';
-    if (v <= 5) return 'small';
-    return 'mid';
-}
-function tripleLevel(rank) {
-    const v = rankValue(rank);
-    if (v >= 12) return 'big';
-    if (v <= 5) return 'small';
-    return 'mid';
-}
-function straightLevel(start) {
-    if (start >= 9) return 'big';
-    if (start <= 5) return 'small';
-    return 'mid';
-}
-function chainLevel(start) {
-    if (start >= 11) return 'big';
-    if (start <= 6) return 'small';
-    return 'mid';
-}
+function singleLevel(card) { const v = rankValue(card.rank); if (v >= 14) return 'big'; if (v <= 6) return 'small'; return 'mid'; }
+function pairLevel(rank) { const v = rankValue(rank); if (v >= 13) return 'big'; if (v <= 5) return 'small'; return 'mid'; }
+function tripleLevel(rank) { const v = rankValue(rank); if (v >= 12) return 'big'; if (v <= 5) return 'small'; return 'mid'; }
+function straightLevel(start) { if (start >= 9) return 'big'; if (start <= 5) return 'small'; return 'mid'; }
+function chainLevel(start) { if (start >= 11) return 'big'; if (start <= 6) return 'small'; return 'mid'; }
 
 const SCORE_TABLE = {
     single: { small: -5, mid: 0, big: 3 },
@@ -541,6 +451,7 @@ const SCORE_TABLE = {
 
 function bombScore(cards) {
     const info = identify(cards);
+    if (!info) return 0;
     if (info.type === 'four_kings') return 18;
     if (info.type === 'flush_straight') return 50;
     const rank = info.bombRank;
@@ -585,33 +496,67 @@ function isWasteType(cards, info, seat) {
     if (info.type !== 'pair_straight' && info.type !== 'plate') return false;
     const start = info.level;
     const needRanks = [];
-    if (info.type === 'pair_straight') {
-        for (let i = 0; i < 3; i++) needRanks.push(RANKS[start + i - 2]);
-    } else {
-        for (let i = 0; i < 2; i++) needRanks.push(RANKS[start + i - 2]);
-    }
-    for (const r of needRanks) {
-        const outside = remainingOutside(r, seat);
-        if (outside < 3) return true;
-    }
+    if (info.type === 'pair_straight') for (let i = 0; i < 3; i++) needRanks.push(RANKS[start + i - 2]);
+    else for (let i = 0; i < 2; i++) needRanks.push(RANKS[start + i - 2]);
+    for (const r of needRanks) if (remainingOutside(r, seat) < 3) return true;
     return false;
 }
 
+// ==================== 划分生成（赖子参与） ====================
+// 简化：赖子按优先级尝试不同用法，生成多个划分
+
 function generatePartitions(hand, seat) {
+    // 基础划分（不含赖子特殊处理）
     const partitions = [];
-    const p1 = partitionGreedy(hand, 'bomb_first', seat);
-    if (p1) partitions.push(p1);
-    const p2 = partitionGreedy(hand, 'chain_first', seat);
-    if (p2) partitions.push(p2);
-    const p3 = partitionGreedy(hand, 'straight_first', seat);
-    if (p3) partitions.push(p3);
-    const p4 = partitionGreedy(hand, 'pair_first', seat);
-    if (p4) partitions.push(p4);
-    const p5 = partitionGreedy(hand, 'triple_pair_first', seat);
-    if (p5) partitions.push(p5);
+    const p1 = partitionGreedy(hand, 'bomb_first', seat); if (p1) partitions.push(p1);
+    const p2 = partitionGreedy(hand, 'chain_first', seat); if (p2) partitions.push(p2);
+    const p3 = partitionGreedy(hand, 'straight_first', seat); if (p3) partitions.push(p3);
+    const p4 = partitionGreedy(hand, 'pair_first', seat); if (p4) partitions.push(p4);
+    const p5 = partitionGreedy(hand, 'triple_pair_first', seat); if (p5) partitions.push(p5);
     const p6 = hand.map(c => ({ cards: [c], info: identify([c]) }));
     partitions.push(p6);
+    // 赖子特殊处理：配炸弹
+    const wilds = hand.filter(isWild);
+    if (wilds.length > 0) {
+        const p7 = partitionWildBomb(hand, seat); if (p7) partitions.push(p7);
+        const p8 = partitionWildFlush(hand, seat); if (p8) partitions.push(p8);
+    }
     return partitions;
+}
+
+function partitionWildBomb(hand, seat) {
+    // 赖子配炸弹：赖子 + 3 张同点 = 4 炸
+    const wilds = hand.filter(isWild);
+    const normals = hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
+    const byRank = {};
+    for (const c of normals) { if (!byRank[c.rank]) byRank[c.rank] = []; byRank[c.rank].push(c); }
+    let best = null;
+    for (const r in byRank) {
+        if (byRank[r].length + wilds.length >= 4 && byRank[r].length >= 3) {
+            const need = 4 - byRank[r].length;
+            const g = [...byRank[r].slice(0, byRank[r].length), ...wilds.slice(0, need)];
+            best = g;
+            break;
+        }
+    }
+    if (!best) return null;
+    const used = new Set(best.map(c => c.id));
+    const groups = [{ cards: best, info: identify(best) }];
+    const rest = hand.filter(c => !used.has(c.id));
+    const restByRank = {};
+    for (const c of rest) { if (!restByRank[c.rank]) restByRank[c.rank] = []; restByRank[c.rank].push(c); }
+    for (const r in restByRank) {
+        const group = restByRank[r];
+        while (group.length >= 3) { const g = group.splice(0, 3); const info = identify(g); if (info) groups.push({ cards: g, info }); else break; }
+        while (group.length >= 2) { const g = group.splice(0, 2); const info = identify(g); if (info) groups.push({ cards: g, info }); else break; }
+        while (group.length >= 1) { const g = group.splice(0, 1); const info = identify(g); if (info) groups.push({ cards: g, info }); }
+    }
+    return groups;
+}
+
+function partitionWildFlush(hand, seat) {
+    // 赖子配同花顺：简化，跳过
+    return null;
 }
 
 function partitionGreedy(hand, mode, seat) {
@@ -628,7 +573,7 @@ function partitionGreedy(hand, mode, seat) {
         }
         for (const r in byRank) {
             if (byRank[r].length >= 4) {
-                const g = byRank[r].slice(0, 4);
+                const g = byRank[r].slice(0, byRank[r].length);  // 切全部（五炸不拆）
                 g.forEach(c => used.add(c.id));
                 groups.push({ cards: g, info: identify(g) });
             }
@@ -653,10 +598,7 @@ function partitionGreedy(hand, mode, seat) {
             for (const p of pairs) {
                 if (t === p) continue;
                 if (used.has(byRank2[p][0].id)) continue;
-                const g = [
-                    ...byRank2[t].slice(0, 3),
-                    ...byRank2[p].slice(0, 2)
-                ];
+                const g = [...byRank2[t].slice(0, 3), ...byRank2[p].slice(0, 2)];
                 g.forEach(c => used.add(c.id));
                 groups.push({ cards: g, info: identify(g) });
                 break;
@@ -666,38 +608,19 @@ function partitionGreedy(hand, mode, seat) {
 
     const rest = cards.filter(c => !used.has(c.id));
     const byRank3 = {};
-    for (const c of rest) {
-        if (!byRank3[c.rank]) byRank3[c.rank] = [];
-        byRank3[c.rank].push(c);
-    }
+    for (const c of rest) { if (!byRank3[c.rank]) byRank3[c.rank] = []; byRank3[c.rank].push(c); }
     for (const r in byRank3) {
         const group = byRank3[r];
-        while (group.length >= 3) {
-            const g = group.splice(0, 3);
-            const info = identify(g);
-            if (info) groups.push({ cards: g, info });
-            else break;
-        }
-        while (group.length >= 2) {
-            const g = group.splice(0, 2);
-            const info = identify(g);
-            if (info) groups.push({ cards: g, info });
-            else break;
-        }
-        while (group.length >= 1) {
-            const g = group.splice(0, 1);
-            const info = identify(g);
-            if (info) groups.push({ cards: g, info });
-        }
+        while (group.length >= 3) { const g = group.splice(0, 3); const info = identify(g); if (info) groups.push({ cards: g, info }); else break; }
+        while (group.length >= 2) { const g = group.splice(0, 2); const info = identify(g); if (info) groups.push({ cards: g, info }); else break; }
+        while (group.length >= 1) { const g = group.splice(0, 1); const info = identify(g); if (info) groups.push({ cards: g, info }); }
     }
     return groups;
 }
 
 function partitionScore(partition, seat) {
     let score = 0;
-    let smallPair = 0, bigPair = 0;
-    let smallTriple = 0, bigTriple = 0;
-    let smallTriplePair = 0, bigTriplePair = 0;
+    let smallPair = 0, bigPair = 0, smallTriple = 0, bigTriple = 0, smallTriplePair = 0, bigTriplePair = 0;
     for (const g of partition) {
         let s = playScore(g.cards);
         if (isWasteType(g.cards, g.info, seat)) s = 0;
@@ -782,20 +705,6 @@ function getMyTypes(hand, seat) {
                     }
                 }
             }
-
-            // 三条（王/级牌）：额外记录单张
-            if (g.info.type === 'triple') {
-                const { normals } = analyzeCards(g.cards);
-                if (normals.length > 0) {
-                    const r = normals[0].rank;
-                    if (r === '大王' || r === '小王' || r === LEVEL) {
-                        for (const card of g.cards) {
-                            const ssig = String(card.id);
-                            if (!types.has(ssig)) types.set(ssig, { cards: [card], info: identify([card]) });
-                        }
-                    }
-                }
-            }
         }
     }
     return [...types.values()];
@@ -803,14 +712,11 @@ function getMyTypes(hand, seat) {
 
 function canTakeLeadSingle(card, seat) {
     const v = rankValue(card.rank);
-    for (const r of RANKS) {
-        if (rankValue(r) > v && remainingOutside(r, seat) > 0) return false;
-    }
+    for (const r of RANKS) if (rankValue(r) > v && remainingOutside(r, seat) > 0) return false;
     if (17 > v && remainingOutside('大王', seat) > 0) return false;
     if (16 > v && remainingOutside('小王', seat) > 0) return false;
     return true;
 }
-
 function canTakeLeadPair(cards, seat) {
     const { normals } = analyzeCards(cards);
     const rank = normals.length > 0 ? normals[0].rank : LEVEL;
@@ -821,15 +727,11 @@ function canTakeLeadPair(cards, seat) {
         if (rankValue(r) <= v) continue;
         const outside = remainingOutside(r, seat);
         if (outside >= 4) return false;
-        if (outside === 2 || outside === 3) {
-            if (oppCount <= 2) return false;
-            score += 1;
-        }
+        if (outside === 2 || outside === 3) { if (oppCount <= 2) return false; score += 1; }
     }
     if (oppCount <= 2) return score === 0;
     return score < 2;
 }
-
 function canTakeLeadTriple(mainRank, seat) {
     const v = rankValue(mainRank);
     const biggerRanks = [];
@@ -848,14 +750,12 @@ function canTakeLeadTriple(mainRank, seat) {
     const adjusted = 1 - (1 - leadProb) * oppRatio;
     return adjusted > 0.7;
 }
-
 function probAtLeast3(N, M) {
     if (N < 3) return 0;
     const avg = N / M;
     if (avg < 2) return 0;
     return Math.min(1, Math.max(0, (N - 2*M) / M + 0.3));
 }
-
 function canTakeLeadChain(cards, seat) {
     const info = identify(cards);
     if (!info) return false;
@@ -863,7 +763,6 @@ function canTakeLeadChain(cards, seat) {
     if (info.type === 'pair_straight' || info.type === 'plate') return chainLevel(info.level) !== 'small';
     return false;
 }
-
 function canTakeLead(cards, seat) {
     const info = identify(cards);
     if (!info) return false;
@@ -883,9 +782,7 @@ function canTakeLead(cards, seat) {
         for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
         return canTakeLeadTriple(mainRank, seat);
     }
-    if (info.type === 'straight' || info.type === 'pair_straight' || info.type === 'plate') {
-        return canTakeLeadChain(cards, seat);
-    }
+    if (info.type === 'straight' || info.type === 'pair_straight' || info.type === 'plate') return canTakeLeadChain(cards, seat);
     return false;
 }
 
@@ -936,27 +833,17 @@ function getPlayPriority(g, hand, seat) {
     const isBig = isBigPlay(g.cards, info);
     let level = 'mid';
     if (info.type === 'single') level = singleLevel(g.cards[0]);
-    else if (info.type === 'pair') {
-        const { normals } = analyzeCards(g.cards);
-        level = pairLevel(normals.length > 0 ? normals[0].rank : LEVEL);
-    }
-    else if (info.type === 'triple') {
-        const { normals } = analyzeCards(g.cards);
-        level = tripleLevel(normals.length > 0 ? normals[0].rank : LEVEL);
-    }
+    else if (info.type === 'pair') { const { normals } = analyzeCards(g.cards); level = pairLevel(normals.length > 0 ? normals[0].rank : LEVEL); }
+    else if (info.type === 'triple') { const { normals } = analyzeCards(g.cards); level = tripleLevel(normals.length > 0 ? normals[0].rank : LEVEL); }
     else if (info.type === 'triple_pair') {
         const { normals } = analyzeCards(g.cards);
-        const count = {};
-        for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
-        let mainRank = LEVEL;
-        for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
+        const count = {}; for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+        let mainRank = LEVEL; for (const r in count) if (count[r] >= 3) { mainRank = r; break; }
         level = tripleLevel(mainRank);
     }
     else if (info.type === 'straight') level = straightLevel(info.level);
     else if (info.type === 'pair_straight' || info.type === 'plate') level = chainLevel(info.level);
-
     const hasCounterpart = checkCounterpart(g, hand, seat);
-
     if (isBig) return 6;
     if (level === 'small') return hasCounterpart ? 2 : 3;
     if (level === 'mid') return hasCounterpart ? 4 : 5;
@@ -970,9 +857,9 @@ function aiChooseBestLead(hand, seat) {
         const sorted = [...hand].sort((a,b) => rankValue(a.rank) - rankValue(b.rank));
         return [sorted[0]];
     }
-    for (const g of myTypes) {
-        g._priority = getPlayPriority(g, hand, seat);
-    }
+    const rankCount = {};
+    for (const c of hand) rankCount[c.rank] = (rankCount[c.rank] || 0) + 1;
+    for (const g of myTypes) g._priority = getPlayPriority(g, hand, seat);
     myTypes.sort((a, b) => {
         if (a._priority !== b._priority) return a._priority - b._priority;
         const order = { plate: 0, pair_straight: 0, straight: 1, triple_pair: 2, single: 3, pair: 4, triple: 5 };
@@ -991,63 +878,29 @@ function findSameType(hand, lastInfo, seat) {
     const myTypes = getMyTypes(hand, seat);
     const rankCount = {};
     for (const c of hand) rankCount[c.rank] = (rankCount[c.rank] || 0) + 1;
-
-    const smallMid = [];
-    const bigCanLead = [];
-    const bigCannotLead = [];
-
+    const smallMid = [], bigCanLead = [], bigCannotLead = [];
     for (const g of myTypes) {
         if (!g.info) continue;
         if (g.info.type !== type) continue;
         if (!canBeat(g.info, lastInfo)) continue;
         const isSpecial = (r) => r === LEVEL || r === '大王' || r === '小王';
-        if (type === 'single') {
-            const card = g.cards[0];
-            if (!isSpecial(card.rank) && rankCount[card.rank] >= 2) continue;
-        }
-        if (type === 'pair') {
-            const { normals } = analyzeCards(g.cards);
-            if (normals.length > 0) {
-                const r = normals[0].rank;
-                if (!isSpecial(r) && rankCount[r] >= 3) continue;
-            }
-        }
-        if (type === 'triple') {
-            const { normals } = analyzeCards(g.cards);
-            if (normals.length > 0) {
-                const r = normals[0].rank;
-                if (!isSpecial(r) && rankCount[r] >= 4) continue;
-            }
-        }
+        if (type === 'single') { const card = g.cards[0]; if (!isSpecial(card.rank) && rankCount[card.rank] >= 2) continue; }
+        if (type === 'pair') { const { normals } = analyzeCards(g.cards); if (normals.length > 0) { const r = normals[0].rank; if (!isSpecial(r) && rankCount[r] >= 3) continue; } }
+        if (type === 'triple') { const { normals } = analyzeCards(g.cards); if (normals.length > 0) { const r = normals[0].rank; if (!isSpecial(r) && rankCount[r] >= 4) continue; } }
         const isBig = isBigPlay(g.cards, g.info);
-        if (!isBig) {
-            smallMid.push(g);
-        } else {
-            if (canTakeLead(g.cards, seat)) bigCanLead.push(g);
-            else bigCannotLead.push(g);
-        }
+        if (!isBig) smallMid.push(g);
+        else { if (canTakeLead(g.cards, seat)) bigCanLead.push(g); else bigCannotLead.push(g); }
     }
-
     const minVal = (g) => Math.min(...g.cards.map(c => rankValue(c.rank)));
-    if (smallMid.length > 0) {
-        smallMid.sort((a, b) => minVal(a) - minVal(b));
-        return smallMid[0].cards;
-    }
-    if (bigCanLead.length > 0) {
-        bigCanLead.sort((a, b) => minVal(a) - minVal(b));
-        return bigCanLead[0].cards;
-    }
-    if (bigCannotLead.length > 0 && Math.random() < 0.3) {
-        bigCannotLead.sort((a, b) => minVal(a) - minVal(b));
-        return bigCannotLead[0].cards;
-    }
+    if (smallMid.length > 0) { smallMid.sort((a, b) => minVal(a) - minVal(b)); return smallMid[0].cards; }
+    if (bigCanLead.length > 0) { bigCanLead.sort((a, b) => minVal(a) - minVal(b)); return bigCanLead[0].cards; }
+    if (bigCannotLead.length > 0 && Math.random() < 0.3) { bigCannotLead.sort((a, b) => minVal(a) - minVal(b)); return bigCannotLead[0].cards; }
     return null;
 }
 
 function findBiggerBomb(hand, lastInfo, seat) {
     const myTypes = getMyTypes(hand, seat);
-    let best = null;
-    let bestLevel = Infinity;
+    let best = null, bestLevel = Infinity;
     for (const g of myTypes) {
         if (!g.info) continue;
         if (!['bomb','flush_straight','four_kings'].includes(g.info.type)) continue;
@@ -1056,7 +909,6 @@ function findBiggerBomb(hand, lastInfo, seat) {
     }
     return best ? best.cards : null;
 }
-
 function shouldUseBomb(hand, context, seat) {
     const myTypes = getMyTypes(hand, seat);
     const bombs = myTypes.filter(g => g.info && ['bomb','flush_straight','four_kings'].includes(g.info.type));
@@ -1073,106 +925,64 @@ function aiTurn() {
     if (hand.length === 0) { advanceTurn(); return; }
     const lastInfo = G.lastPlay ? G.lastPlay.info : null;
     const teammate = (p === 1) ? 3 : (p === 3) ? 1 : (p === 2) ? 0 : 2;
-
-    let cards = null;
-    let usedBomb = false;
+    let cards = null, usedBomb = false;
 
     if (!lastInfo) {
         const opps = [0,1,2,3].filter(x => x !== p && x !== teammate && G.hands[x].length > 0);
         const allOppSmall = opps.length > 0 && opps.every(x => G.hands[x].length <= 3);
         if (allOppSmall) {
             const nonBomb = getMyTypes(hand, p).filter(g => g.info && !['bomb','flush_straight','four_kings'].includes(g.info.type));
-            if (nonBomb.length <= 1) {
-                const bomb = shouldUseBomb(hand, { type: 'lead' }, p);
-                if (bomb) { cards = bomb; usedBomb = true; }
-            }
+            if (nonBomb.length <= 1) { const bomb = shouldUseBomb(hand, { type: 'lead' }, p); if (bomb) { cards = bomb; usedBomb = true; } }
         }
-        if (!cards && G.aiSkipCounts[p] >= 3) {
-            const bomb = shouldUseBomb(hand, { type: 'lead' }, p);
-            if (bomb) { cards = bomb; usedBomb = true; }
-        }
+        if (!cards && G.aiSkipCounts[p] >= 3) { const bomb = shouldUseBomb(hand, { type: 'lead' }, p); if (bomb) { cards = bomb; usedBomb = true; } }
         if (!cards) {
             const myTypes = getMyTypes(hand, p);
             const nonBombTypes = myTypes.filter(g => g.info && !['bomb','flush_straight','four_kings'].includes(g.info.type));
-            if (nonBombTypes.length === 0) {
-                cards = shouldUseBomb(hand, { type: 'lead' }, p);
-                usedBomb = true;
-            } else {
-                cards = aiChooseBestLead(hand, p);
-            }
+            if (nonBombTypes.length === 0) { cards = shouldUseBomb(hand, { type: 'lead' }, p); usedBomb = true; }
+            else cards = aiChooseBestLead(hand, p);
         }
     } else {
         const lastPlayer = G.lastPlayer;
         const isTeammate = (lastPlayer === teammate);
         const lastHandCount = G.hands[lastPlayer] ? G.hands[lastPlayer].length : 0;
         let bombReason = null;
-
         if (!isTeammate) {
-            if (lastPlayer === (p + 3) % 4) {
-                if (lastHandCount === 6) bombReason = '上家剩6';
-                if (lastHandCount === 1) bombReason = '上家剩1';
-            }
-            if (lastPlayer === (p + 1) % 4) {
-                if (lastHandCount === 6 || lastHandCount === 1) bombReason = '下家剩6/1';
-            }
+            if (lastPlayer === (p + 3) % 4) { if (lastHandCount === 6) bombReason = '上家剩6'; if (lastHandCount === 1) bombReason = '上家剩1'; }
+            if (lastPlayer === (p + 1) % 4) { if (lastHandCount === 6 || lastHandCount === 1) bombReason = '下家剩6/1'; }
             if (lastInfo && ['bomb','flush_straight','four_kings'].includes(lastInfo.type) && !G.lastPlay.wasLead) {
-                const bigger = findBiggerBomb(hand, lastInfo, p);
-                if (bigger) { cards = bigger; usedBomb = true; }
+                const bigger = findBiggerBomb(hand, lastInfo, p); if (bigger) { cards = bigger; usedBomb = true; }
             }
         }
-
-        if (!cards && G.aiSkipCounts[p] >= 3) {
-            const bomb = shouldUseBomb(hand, { type: 'pass' }, p);
-            if (bomb) { cards = bomb; usedBomb = true; }
-        }
-        if (!cards && bombReason) {
-            const bomb = shouldUseBomb(hand, { type: 'pass' }, p);
-            if (bomb) { cards = bomb; usedBomb = true; }
-        }
+        if (!cards && G.aiSkipCounts[p] >= 3) { const bomb = shouldUseBomb(hand, { type: 'pass' }, p); if (bomb) { cards = bomb; usedBomb = true; } }
+        if (!cards && bombReason) { const bomb = shouldUseBomb(hand, { type: 'pass' }, p); if (bomb) { cards = bomb; usedBomb = true; } }
         if (!cards) {
             const opps = [0,1,2,3].filter(x => x !== p && x !== teammate && G.hands[x].length > 0);
             const allOppSmall = opps.length > 0 && opps.every(x => G.hands[x].length <= 3);
             if (allOppSmall) {
                 const nonBomb = getMyTypes(hand, p).filter(g => g.info && !['bomb','flush_straight','four_kings'].includes(g.info.type));
-                if (nonBomb.length <= 1) {
-                    const bomb = shouldUseBomb(hand, { type: 'pass' }, p);
-                    if (bomb) { cards = bomb; usedBomb = true; }
-                }
+                if (nonBomb.length <= 1) { const bomb = shouldUseBomb(hand, { type: 'pass' }, p); if (bomb) { cards = bomb; usedBomb = true; } }
             }
         }
-
         if (!cards) {
             if (isTeammate) {
                 const teammateBig = lastInfo && isBigPlay(G.lastPlay.cards, lastInfo);
-                if (teammateBig && canTakeLead(G.lastPlay.cards, p)) {
-                    cards = null;
-                } else {
+                if (teammateBig && canTakeLead(G.lastPlay.cards, p)) cards = null;
+                else {
                     const hint = findSameType(hand, lastInfo, p);
-                    if (hint) {
-                        const hintInfo = identify(hint);
-                        if (hintInfo && !isBigPlay(hint, hintInfo)) cards = hint;
-                    }
+                    if (hint) { const hintInfo = identify(hint); if (hintInfo && !isBigPlay(hint, hintInfo)) cards = hint; }
                 }
             } else {
                 const hint = findSameType(hand, lastInfo, p);
                 if (hint) cards = hint;
                 if (!cards && ['bomb','flush_straight','four_kings'].includes(lastInfo.type)) {
-                    const bigger = findBiggerBomb(hand, lastInfo, p);
-                    if (bigger) cards = bigger;
+                    const bigger = findBiggerBomb(hand, lastInfo, p); if (bigger) cards = bigger;
                 }
             }
         }
     }
-
     if (cards && cards.length > 0) {
         const info = identify(cards);
-        if (info) {
-            G.aiSkipCounts[p] = 0;
-            playCards(p, cards, info);
-            if (!G.playing) return;
-            advanceTurn();
-            return;
-        }
+        if (info) { G.aiSkipCounts[p] = 0; playCards(p, cards, info); if (!G.playing) return; advanceTurn(); return; }
     }
     G.aiSkipCounts[p] = (G.aiSkipCounts[p] || 0) + 1;
     pass(p);
@@ -1186,14 +996,10 @@ function cardHTML(card, small) {
     if (card.suit === '♥' || card.suit === '♦' || card.rank === '大王') cls.push('red');
     if (G.selected.has(card.id)) cls.push('selected');
     let display;
-    if (card.suit === 'JOKER') {
-        display = `<div>${card.rank === '大王' ? '大' : '小'}</div><div class="suit">🃏</div>`;
-    } else {
-        display = `<div>${card.rank}</div><div class="suit">${card.suit}</div>`;
-    }
+    if (card.suit === 'JOKER') display = `<div>${card.rank === '大王' ? '大' : '小'}</div><div class="suit">🃏</div>`;
+    else display = `<div>${card.rank}</div><div class="suit">${card.suit}</div>`;
     return `<div class="${cls.join(' ')}" data-id="${card.id}">${display}</div>`;
 }
-
 function renderHand() {
     const el = document.getElementById('myHand');
     const sorted = [...G.hands[0]].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
@@ -1201,19 +1007,12 @@ function renderHand() {
     el.querySelectorAll('.card').forEach(cardEl => {
         cardEl.onclick = () => {
             const id = parseInt(cardEl.dataset.id);
-            if (G.selected.has(id)) G.selected.delete(id);
-            else G.selected.add(id);
+            if (G.selected.has(id)) G.selected.delete(id); else G.selected.add(id);
             renderHand();
         };
     });
 }
-
-function renderCounts() {
-    for (let i = 0; i < 4; i++) {
-        document.getElementById('c' + i).textContent = G.hands[i].length + ' 张';
-    }
-}
-
+function renderCounts() { for (let i = 0; i < 4; i++) document.getElementById('c' + i).textContent = G.hands[i].length + ' 张'; }
 function renderRanks() {
     for (let i = 0; i < 4; i++) {
         const el = document.getElementById('r' + i);
@@ -1221,13 +1020,11 @@ function renderRanks() {
         else el.textContent = '';
     }
 }
-
 function renderPlayArea() {
     const el = document.getElementById('playArea');
     if (!G.lastPlay) { el.innerHTML = ''; return; }
     el.innerHTML = G.lastPlay.cards.map(c => cardHTML(c, true)).join('');
 }
-
 function renderAiHands() {
     const el = document.getElementById('aiHands');
     let html = '';
@@ -1239,7 +1036,6 @@ function renderAiHands() {
     }
     el.innerHTML = html;
 }
-
 function log(msg, cls = '') {
     const el = document.getElementById('log');
     const div = document.createElement('div');
@@ -1254,27 +1050,14 @@ function deal() {
     for (let i = 0; i < 4; i++) G.hands[i] = [];
     for (let i = 0; i < deck.length; i++) G.hands[i % 4].push(deck[i]);
     for (let i = 0; i < 4; i++) G.hands[i].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
-    G.currentPlayer = 0;
-    G.lastPlay = null;
-    G.lastPlayer = -1;
-    G.passCount = 0;
-    G.selected.clear();
-    G.finished = [];
-    G.playedCards = [];
-    G.playedRanks = [{}, {}, {}, {}];
-    G.newRoundStarter = null;
-    G.aiSkipCounts = [0, 0, 0, 0];
-    G.playing = true;
-    renderHand();
-    renderCounts();
-    renderRanks();
-    renderPlayArea();
-    renderCounter();
-    renderAiHands();
+    G.currentPlayer = 0; G.lastPlay = null; G.lastPlayer = -1; G.passCount = 0;
+    G.selected.clear(); G.finished = []; G.playedCards = [];
+    G.playedRanks = [{}, {}, {}, {}]; G.newRoundStarter = null;
+    G.aiSkipCounts = [0, 0, 0, 0]; G.playing = true;
+    renderHand(); renderCounts(); renderRanks(); renderPlayArea(); renderCounter(); renderAiHands();
     log('=== 新一局开始，你先出牌 ===', 'sys');
     updateControls();
 }
-
 function playerName(p) { return ['我', 'AI 左', 'AI 对家', 'AI 右'][p]; }
 function cardName(c) { return c.suit === 'JOKER' ? c.rank : c.suit + c.rank; }
 function getSelectedCards() { return G.hands[0].filter(c => G.selected.has(c.id)); }
@@ -1283,46 +1066,28 @@ function playCards(player, cards, info) {
     const wasLead = (G.lastPlay === null);
     const ids = new Set(cards.map(c => c.id));
     G.hands[player] = G.hands[player].filter(c => !ids.has(c.id));
-    for (const c of cards) {
-        G.playedCards.push(c);
-        G.playedRanks[player][c.rank] = (G.playedRanks[player][c.rank] || 0) + 1;
-    }
+    for (const c of cards) { G.playedCards.push(c); G.playedRanks[player][c.rank] = (G.playedRanks[player][c.rank] || 0) + 1; }
     G.lastPlay = { player, cards, info, wasLead };
-    G.lastPlayer = player;
-    G.passCount = 0;
-    renderHand();
-    renderCounts();
-    renderPlayArea();
-    renderCounter();
-    renderAiHands();
+    G.lastPlayer = player; G.passCount = 0;
+    renderHand(); renderCounts(); renderPlayArea(); renderCounter(); renderAiHands();
     log(`${playerName(player)} 出：${cards.map(cardName).join(' ')}`, player === 0 ? 'my' : '');
-    if (G.hands[player].length === 0) {
-        G.finished.push(player);
-        renderRanks();
-        log(`${playerName(player)} 第 ${G.finished.length} 名出完！`, 'sys');
-    }
+    if (G.hands[player].length === 0) { G.finished.push(player); renderRanks(); log(`${playerName(player)} 第 ${G.finished.length} 名出完！`, 'sys'); }
     checkGameOver();
 }
-
 function pass(player) {
     log(`${playerName(player)} 不出`, player === 0 ? 'my' : '');
     G.passCount++;
     if (G.passCount >= 3 && G.lastPlayer >= 0) {
-        G.lastPlay = null;
-        G.passCount = 0;
-        G.newRoundStarter = G.lastPlayer;
-        renderPlayArea();
-        log('一轮结束，重新出牌', 'sys');
+        G.lastPlay = null; G.passCount = 0; G.newRoundStarter = G.lastPlayer;
+        renderPlayArea(); log('一轮结束，重新出牌', 'sys');
     }
 }
-
 function checkGameOver() {
     if (G.hands.every(h => h.length === 0)) { finishGame(); return; }
     const doneA = [0, 2].filter(p => G.hands[p].length === 0).length;
     const doneB = [1, 3].filter(p => G.hands[p].length === 0).length;
     if (doneA === 2 || doneB === 2) finishGame();
 }
-
 function finishGame() {
     G.playing = false;
     const remaining = [0,1,2,3].filter(p => !G.finished.includes(p));
@@ -1337,7 +1102,6 @@ function finishGame() {
     else log(`单下，${teamOf(first) === 'A' ? '我方' : '对方'}拿了第 1 名`, 'sys');
     updateControls();
 }
-
 function updateControls() {
     const myTurn = G.playing && G.currentPlayer === 0 && G.hands[0].length > 0;
     document.getElementById('playBtn').disabled = !myTurn;
@@ -1345,28 +1109,26 @@ function updateControls() {
     document.getElementById('hintBtn').disabled = !myTurn;
     document.getElementById('nextBtn').disabled = !G.playing || G.currentPlayer === 0;
 }
-
 function advanceTurn() {
     if (!G.playing) return;
     let next;
     if (G.newRoundStarter !== null) {
-        next = G.newRoundStarter;
-        G.newRoundStarter = null;
-        if (G.hands[next].length === 0) {
-            let count = 0;
-            do { next = (next + 1) % 4; count++; }
-            while (G.hands[next].length === 0 && count < 4);
-        }
+        next = G.newRoundStarter; G.newRoundStarter = null;
+        if (G.hands[next].length === 0) { let count = 0; do { next = (next + 1) % 4; count++; } while (G.hands[next].length === 0 && count < 4); }
     } else {
         next = (G.currentPlayer + 1) % 4;
         let count = 0;
-        while (G.hands[next].length === 0 && count < 4) {
-            next = (next + 1) % 4;
-            count++;
-        }
+        while (G.hands[next].length === 0 && count < 4) { next = (next + 1) % 4; count++; }
     }
-    G.currentPlayer = next;
-    updateControls();
+    G.currentPlayer = next; updateControls();
+}
+
+function typeName(info) {
+    const names = { single: '单张', pair: '对子', triple: '三条', triple_pair: '葫芦', straight: '顺子', pair_straight: '连对', plate: '钢板', bomb: '炸弹', flush_straight: '同花顺', four_kings: '天王炸' };
+    let name = names[info.type] || info.type;
+    if (info.type === 'triple_pair' && info.mainRank) name += `（三条${info.mainRank}）`;
+    if (info.type === 'bomb') name += `（${info.bombSize}张${info.bombRank}）`;
+    return name;
 }
 
 function showTypeSelect(cards, allInfos) {
@@ -1384,29 +1146,13 @@ function showTypeSelect(cards, allInfos) {
         btn.onclick = () => {
             const idx = parseInt(btn.dataset.idx);
             const info = allInfos[idx];
-            G.selected.clear();
-            panel.innerHTML = '';
+            G.selected.clear(); panel.innerHTML = '';
             playCards(0, cards, info);
             if (!G.playing) return;
             advanceTurn();
         };
     });
-    document.getElementById('cancelTypeBtn').onclick = () => {
-        panel.innerHTML = '';
-        updateControls();
-    };
-}
-
-function typeName(info) {
-    const names = {
-        single: '单张', pair: '对子', triple: '三条', triple_pair: '葫芦',
-        straight: '顺子', pair_straight: '连对', plate: '钢板',
-        bomb: '炸弹', flush_straight: '同花顺', four_kings: '天王炸'
-    };
-    let name = names[info.type] || info.type;
-    if (info.type === 'triple_pair' && info.mainRank) name += `（三条${info.mainRank}）`;
-    if (info.type === 'bomb') name += `（${info.bombSize}张${info.bombRank}）`;
-    return name;
+    document.getElementById('cancelTypeBtn').onclick = () => { panel.innerHTML = ''; updateControls(); };
 }
 
 document.getElementById('playBtn').onclick = () => {
@@ -1415,7 +1161,6 @@ document.getElementById('playBtn').onclick = () => {
     if (cards.length === 0) { log('请先选牌', 'sys'); return; }
     const allInfos = identifyAll(cards);
     if (allInfos.length === 0) { log('牌型不合法', 'sys'); return; }
-
     if (allInfos.length === 1) {
         const info = allInfos[0];
         if (G.lastPlay && !canBeat(info, G.lastPlay.info)) { log('压不过上家', 'sys'); return; }
@@ -1431,8 +1176,7 @@ document.getElementById('playBtn').onclick = () => {
 document.getElementById('passBtn').onclick = () => {
     if (!G.playing || G.currentPlayer !== 0) return;
     if (!G.lastPlay) { log('你是先手，必须出牌', 'sys'); return; }
-    G.selected.clear();
-    renderHand();
+    G.selected.clear(); renderHand();
     pass(0);
     if (!G.playing) return;
     advanceTurn();
@@ -1454,10 +1198,7 @@ document.getElementById('nextBtn').onclick = () => {
     aiTurn();
 };
 
-document.getElementById('restartBtn').onclick = () => {
-    document.getElementById('log').innerHTML = '';
-    deal();
-};
+document.getElementById('restartBtn').onclick = () => { document.getElementById('log').innerHTML = ''; deal(); };
 
 deal();
 </script>
