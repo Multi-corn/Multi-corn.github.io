@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -203,53 +204,54 @@ function checkTriple(cards) {
     return { type: 'triple', level: rankValue(rank), cards, wildAssign };
 }
 
-function checkTriplePair(cards) {
-    if (cards.length !== 5) return null;
-    const { wilds, normals } = analyzeCards(cards);
-    if (normals.some(c => c.suit === 'JOKER')) return null;
-    const count = {};
-    for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
-    const ranks = Object.keys(count);
-    for (const r3 of ranks) {
-        for (const r2 of ranks) {
-            if (r3 === r2) continue;
-            let need3 = 3 - count[r3];
-            let need2 = 2 - count[r2];
-            if (need3 < 0 || need2 < 0) continue;
-            if (need3 + need2 === wilds.length) {
-                const wildAssign = [];
-                for (let i = 0; i < need3; i++) wildAssign.push({ cardId: wilds[i].id, rank: r3, suit: wilds[i].suit });
-                for (let i = 0; i < need2; i++) wildAssign.push({ cardId: wilds[need3 + i].id, rank: r2, suit: wilds[need3 + i].suit });
-                return { type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2, wildAssign };
-            }
-        }
-    }
-    return null;
-}
-
-function checkTriplePairAll(cards) {
+function getTriplePairCandidates(cards) {
     if (cards.length !== 5) return [];
     const { wilds, normals } = analyzeCards(cards);
     if (normals.some(c => c.suit === 'JOKER')) return [];
+
     const count = {};
     for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
-    const ranks = Object.keys(count);
+
     const results = [];
-    for (const r3 of ranks) {
-        for (const r2 of ranks) {
+    for (const r3 of RANKS) {
+        for (const r2 of RANKS) {
             if (r3 === r2) continue;
-            let need3 = 3 - count[r3];
-            let need2 = 2 - count[r2];
-            if (need3 < 0 || need2 < 0) continue;
-            if (need3 + need2 === wilds.length) {
-                const wildAssign = [];
-                for (let i = 0; i < need3; i++) wildAssign.push({ cardId: wilds[i].id, rank: r3, suit: wilds[i].suit });
-                for (let i = 0; i < need2; i++) wildAssign.push({ cardId: wilds[need3 + i].id, rank: r2, suit: wilds[need3 + i].suit });
-                results.push({ type: 'triple_pair', level: rankValue(r3), cards, mainRank: r3, pairRank: r2, wildAssign });
+            if (Object.keys(count).some(r => r !== r3 && r !== r2)) continue;
+
+            const have3 = count[r3] || 0;
+            const have2 = count[r2] || 0;
+            if (have3 > 3 || have2 > 2) continue;
+
+            const need3 = 3 - have3;
+            const need2 = 2 - have2;
+            if (need3 + need2 !== wilds.length) continue;
+
+            const wildAssign = [];
+            for (let i = 0; i < need3; i++) {
+                wildAssign.push({ cardId: wilds[i].id, rank: r3, suit: wilds[i].suit });
             }
+            for (let i = 0; i < need2; i++) {
+                wildAssign.push({ cardId: wilds[need3 + i].id, rank: r2, suit: wilds[need3 + i].suit });
+            }
+            results.push({
+                type: 'triple_pair',
+                level: rankValue(r3),
+                cards,
+                mainRank: r3,
+                pairRank: r2,
+                wildAssign
+            });
         }
     }
     return results;
+}
+
+function checkTriplePair(cards) {
+    return getTriplePairCandidates(cards)[0] || null;
+}
+
+function checkTriplePairAll(cards) {
+    return getTriplePairCandidates(cards);
 }
 
 function checkStraight(cards) {
@@ -667,20 +669,14 @@ function getMyTypes(hand, seat) {
             const sig = g.cards.map(c => c.id).sort().join(',');
             if (!types.has(sig)) types.set(sig, g);
 
-            // 葫芦：额外记录三条和对子
+            // 葫芦：按赖子分配结果拆出三条和对子，避免漏掉赖子。
             if (g.info.type === 'triple_pair') {
-                const { normals } = analyzeCards(g.cards);
-                const count = {};
-                for (const c of normals) count[c.rank] = (count[c.rank] || 0) + 1;
+                const wildById = new Map((g.info.wildAssign || []).map(a => [a.cardId, a.rank]));
                 const tripleCards = [], pairCards = [];
-                for (const r in count) {
-                    if (count[r] >= 3) {
-                        const cs = g.cards.filter(c => c.rank === r && !isWild(c)).slice(0, 3);
-                        tripleCards.push(...cs);
-                    } else if (count[r] >= 2) {
-                        const cs = g.cards.filter(c => c.rank === r && !isWild(c)).slice(0, 2);
-                        pairCards.push(...cs);
-                    }
+                for (const card of g.cards) {
+                    const assignedRank = isWild(card) ? wildById.get(card.id) : card.rank;
+                    if (assignedRank === g.info.mainRank) tripleCards.push(card);
+                    else if (assignedRank === g.info.pairRank) pairCards.push(card);
                 }
                 if (tripleCards.length === 3) {
                     const tsig = tripleCards.map(c => c.id).sort().join(',');
@@ -874,6 +870,7 @@ function aiChooseBestLead(hand, seat) {
 }
 
 function findSameType(hand, lastInfo, seat) {
+    if (!lastInfo) return null;
     const type = lastInfo.type;
     const myTypes = getMyTypes(hand, seat);
     const rankCount = {};
@@ -1184,8 +1181,11 @@ document.getElementById('passBtn').onclick = () => {
 
 document.getElementById('hintBtn').onclick = () => {
     if (!G.playing || G.currentPlayer !== 0) return;
-    const hint = findSameType(G.hands[0], G.lastPlay ? G.lastPlay.info : null, 0);
-    if (!hint || hint.length === 0) { log('没有能压过的牌', 'sys'); return; }
+    // 新一轮由我先手时，提示一组适合领出的牌；跟牌时才寻找能压过上家的牌。
+    const hint = G.lastPlay
+        ? findSameType(G.hands[0], G.lastPlay.info, 0)
+        : aiChooseBestLead(G.hands[0], 0);
+    if (!hint || hint.length === 0) { log(G.lastPlay ? '没有能压过的牌' : '当前没有可提示的牌', 'sys'); return; }
     G.selected.clear();
     hint.forEach(c => G.selected.add(c.id));
     renderHand();
