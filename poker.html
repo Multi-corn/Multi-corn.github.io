@@ -33,6 +33,10 @@ h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 
     <button id="playBtn">出牌</button>
     <button id="passBtn" class="sec">不出</button>
     <button id="hintBtn" class="sec">提示</button>
+    <button id="flushHintBtn" class="sec">同花顺提示</button>
+    <button id="reorderBtn" class="sec">理牌</button>
+    <button id="reorderConfirmBtn" class="sec" style="display:none">确定</button>
+    <button id="reorderCancelBtn" class="sec" style="display:none">取消</button>
     <button id="restartBtn" class="sec">重开</button>
 </div>
 <div id="log"></div>
@@ -120,15 +124,16 @@ function checkFlushStraight(cards) {
 }
 
 function checkBomb(cards) {
-    if (cards.length < 4) return null;
+    if (!cards || cards.length < 4 || cards.length > 8) return null;
     const { wilds, normals } = analyzeCards(cards);
     if (normals.some(c => c.suit === 'JOKER')) return null;
     const ranks = new Set(normals.map(c => c.rank));
     if (ranks.size > 1) return null;
-    const rank = normals.length > 0 ? normals[0].rank : LEVEL;
-    const rankV = rankValue(rank);
+    // 至少四张牌可组成同点数炸弹；红桃级牌可补成任意同点数。
+    const rank = normals.length ? normals[0].rank : LEVEL;
+    if (normals.length > 0 && normals.length + wilds.length < 4) return null;
     const wildAssign = wilds.map(w => ({ cardId: w.id, rank, suit: w.suit }));
-    return { type: 'bomb', level: 400 + cards.length * 100 + rankV, cards, bombRank: rank, bombSize: cards.length, wildAssign };
+    return { type: 'bomb', level: 400 + cards.length * 100 + rankValue(rank), cards, bombRank: rank, bombSize: cards.length, wildAssign };
 }
 
 function checkSingle(cards) {
@@ -366,6 +371,8 @@ const G = {
     newRoundStarter: null,
     playedRanks: [{}, {}, {}, {}],
     aiSkipCounts: [0, 0, 0, 0],
+    customOrder: [],
+    reorderMode: false,
 };
 
 const COUNTER_ORDER = ['大王','小王','2','A','K','Q','J','10','9','8','7','6','5','4','3'];
@@ -967,7 +974,8 @@ function cardHTML(card, small) {
 }
 function renderHand() {
     const el = document.getElementById('myHand');
-    const sorted = [...G.hands[0]].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
+    let sorted = [...G.hands[0]].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
+    if (G.customOrder.length) { const map = new Map(sorted.map(c => [c.id, c])); const ordered = G.customOrder.map(id => map.get(id)).filter(Boolean); sorted = [...sorted.filter(c => !G.customOrder.includes(c.id)), ...ordered]; }
     el.innerHTML = sorted.map(c => cardHTML(c, false)).join('');
     el.querySelectorAll('.card').forEach(cardEl => {
         cardEl.onclick = () => {
@@ -1006,7 +1014,7 @@ function deal() {
     for (let i = 0; i < deck.length; i++) G.hands[i % 4].push(deck[i]);
     for (let i = 0; i < 4; i++) G.hands[i].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
     G.currentPlayer = 0; G.lastPlay = null; G.lastPlayer = -1; G.passCount = 0;
-    G.selected.clear(); G.finished = []; G.playedCards = [];
+    G.selected.clear(); G.finished = []; G.playedCards = []; G.customOrder = []; G.reorderMode = false;
     G.playedRanks = [{}, {}, {}, {}]; G.newRoundStarter = null;
     G.aiSkipCounts = [0, 0, 0, 0]; G.playing = true;
     renderHand(); renderCounts(); renderRanks(); renderPlayArea(); renderCounter(); renderAiHands();
@@ -1062,6 +1070,15 @@ function updateControls() {
     document.getElementById('playBtn').disabled = !myTurn;
     document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay;
     document.getElementById('hintBtn').disabled = !myTurn;
+    document.getElementById('flushHintBtn').disabled = !myTurn;
+    document.getElementById('reorderBtn').disabled = !G.playing;
+    document.getElementById('reorderConfirmBtn').style.display = G.reorderMode ? '' : 'none';
+    document.getElementById('reorderCancelBtn').style.display = G.reorderMode ? '' : 'none';
+    document.getElementById('reorderBtn').style.display = G.reorderMode ? 'none' : '';
+    document.getElementById('playBtn').disabled = !myTurn || G.reorderMode;
+    document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay || G.reorderMode;
+    document.getElementById('hintBtn').disabled = !myTurn || G.reorderMode;
+    document.getElementById('flushHintBtn').disabled = !myTurn || G.reorderMode;
     for (let i = 0; i < 4; i++) document.getElementById('p' + i).classList.toggle('active', G.playing && G.currentPlayer === i);
 }
 function advanceTurn() {
@@ -1143,14 +1160,65 @@ document.getElementById('passBtn').onclick = () => {
 document.getElementById('hintBtn').onclick = () => {
     if (!G.playing || G.currentPlayer !== 0) return;
     // 新一轮由我先手时，提示一组适合领出的牌；跟牌时才寻找能压过上家的牌。
-    const hint = G.lastPlay
+    let hint = G.lastPlay
         ? findSameType(G.hands[0], G.lastPlay.info, 0)
         : aiChooseBestLead(G.hands[0], 0);
-    if (!hint || hint.length === 0) { log(G.lastPlay ? '没有能压过的牌' : '当前没有可提示的牌', 'sys'); return; }
+    // 额外直接搜索炸弹候选，避免分牌评估过程中漏掉炸弹。
+    if (!hint || hint.length === 0) {
+        if (G.lastPlay && ['bomb','flush_straight','four_kings'].includes(G.lastPlay.info.type)) {
+            hint = findBiggerBomb(G.hands[0], G.lastPlay.info, 0);
+        } else {
+            const hand = G.hands[0], wilds = hand.filter(isWild), candidates = [];
+            for (const rank of RANKS) {
+                const group = hand.filter(c => !isWild(c) && c.rank === rank);
+                for (let size = 4; size <= 8; size++) {
+                    const maxWild = Math.min(wilds.length, size), minWild = Math.max(0, size - group.length);
+                    for (let wc = minWild; wc <= maxWild; wc++) {
+                        const nc = size - wc; if (nc > group.length || nc < 0) continue;
+                        const cards = [...group.slice(0,nc), ...wilds.slice(0,wc)];
+                        if (cards.length !== size) continue;
+                        const info = identify(cards);
+                        if (info && info.type === 'bomb' && (!G.lastPlay || canBeat(info,G.lastPlay.info))) candidates.push({cards,info});
+                    }
+                }
+            }
+            candidates.sort((a,b)=>a.info.level-b.info.level);
+            if (candidates.length) hint = candidates[0].cards;
+        }
+    }
+    if (!hint || hint.length === 0) { log(G.lastPlay ? '没有能压过的牌（已检查炸弹）' : '当前没有可提示的牌', 'sys'); return; }
     G.selected.clear();
     hint.forEach(c => G.selected.add(c.id));
     renderHand();
     log(`提示：${hint.map(cardName).join(' ')}`, 'sys');
+};
+
+document.getElementById('flushHintBtn').onclick = () => {
+    if (!G.playing || G.currentPlayer !== 0 || G.reorderMode) return;
+    const hand = G.hands[0], found = [];
+    for (let i = 0; i < hand.length - 4; i++) for (let j = i + 1; j < hand.length - 3; j++)
+    for (let k = j + 1; k < hand.length - 2; k++) for (let m = k + 1; m < hand.length - 1; m++)
+    for (let n = m + 1; n < hand.length; n++) {
+        const combo = [hand[i],hand[j],hand[k],hand[m],hand[n]];
+        const info = identifyAll(combo).find(x => x.type === 'flush_straight');
+        if (info && (!G.lastPlay || canBeat(info, G.lastPlay.info))) found.push({cards:combo,info});
+    }
+    found.sort((a,b)=>a.info.level-b.info.level);
+    if (!found.length) { log('没有可提示的同花顺' + (G.lastPlay ? '（当前牌权下无法压过）' : ''), 'sys'); return; }
+    G.selected.clear(); found[0].cards.forEach(c=>G.selected.add(c.id)); renderHand();
+    log('同花顺提示：已选中 ' + found[0].cards.map(cardName).join(' '), 'sys');
+};
+document.getElementById('reorderBtn').onclick = () => {
+    G.reorderMode = true; G.selected.clear(); updateControls(); renderHand();
+    document.getElementById('actionPanel').textContent = '理牌模式：点击要放到手牌末尾的牌，再点「确定」';
+};
+document.getElementById('reorderConfirmBtn').onclick = () => {
+    const chosen = [...G.selected]; G.customOrder = chosen; G.selected.clear(); G.reorderMode = false;
+    document.getElementById('actionPanel').textContent = '已将选中的牌排列到手牌末尾'; updateControls(); renderHand();
+};
+document.getElementById('reorderCancelBtn').onclick = () => {
+    G.selected.clear(); G.reorderMode = false; document.getElementById('actionPanel').textContent = '';
+    updateControls(); renderHand();
 };
 
 document.getElementById('restartBtn').onclick = () => { document.getElementById('log').innerHTML = ''; deal(); };
