@@ -11,7 +11,7 @@
 h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 0 5px;text-shadow:0 2px 12px #0008}body:before{content:'GUANDAN  ·  FOUR PLAYER TABLE';font-size:10px;letter-spacing:4px;color:#9bb9a8;margin-bottom:18px}
 #counter{width:min(100%,1000px);display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px #0003}.counterItem{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}.counterItem .mini-card{width:26px;height:32px;background:#fff;color:#222;border-radius:4px;border:1px solid #ddd;display:grid;place-items:center;font-size:10px;font-weight:bold}.counterItem .mini-card.joker{color:#9c2020}.counterItem .left-num{font-variant-numeric:tabular-nums;color:var(--gold)}.counterItem .left-num.done{color:#60796d}
 #table{position:relative;width:min(100%,1000px);height:440px;border:8px solid #735b36;border-radius:220px;background:radial-gradient(ellipse at center,#176449 0%,#0c4934 62%,#073323 100%);box-shadow:inset 0 0 0 2px #c5a66a55,inset 0 0 50px #00180f99,0 18px 40px #0006;margin-bottom:16px}.player{position:absolute;min-width:110px;text-align:center;padding:9px 14px;border:1px solid transparent;border-radius:12px;background:#06271e99;box-shadow:0 5px 15px #0018}.player .name{font-size:14px;color:#e7e2d2;font-weight:600}.player .count{font-size:12px;color:#b8cfc3;margin-top:4px}.player .rank-tag{display:block;color:var(--gold);font-size:11px;margin-top:3px}.player.active{border-color:var(--gold);box-shadow:0 0 0 2px #e7c77b22,0 0 22px #e7c77b44}.player.active .name{color:var(--gold)}#p0{bottom:12px;left:50%;transform:translateX(-50%)}#p1{left:22px;top:50%;transform:translateY(-50%)}#p2{top:10px;left:50%;transform:translateX(-50%)}#p3{right:22px;top:50%;transform:translateY(-50%)}
-.playArea{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;min-height:95px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px}.card{display:inline-flex;flex-direction:column;justify-content:space-between;width:47px;height:66px;background:linear-gradient(145deg,#fff,#eee9df);color:#18221c;border:1px solid #d7d0c3;border-radius:7px;font-size:15px;font-weight:800;line-height:1;padding:6px;position:relative;cursor:pointer;box-shadow:0 3px 7px #0018;transition:transform .13s,box-shadow .13s}.card.red{color:#c52b32}.card .suit{font-size:19px;align-self:flex-end}.card.small{width:35px;height:49px;font-size:12px;padding:4px}.card.small .suit{font-size:14px}.card.selected{transform:translateY(-13px);box-shadow:0 0 0 2px var(--gold),0 8px 16px #0007}
+.playArea{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;min-height:95px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px}.card{display:inline-flex;flex-direction:column;justify-content:space-between;width:47px;height:66px;background:linear-gradient(145deg,#fff,#eee9df);color:#18221c;border:1px solid #d7d0c3;border-radius:7px;font-size:15px;font-weight:800;line-height:1;padding:6px;position:relative;cursor:pointer;box-shadow:0 3px 7px #0018;transition:transform .13s,box-shadow .13s}.card.red{color:#c52b32}.card .suit{font-size:19px;align-self:flex-end}.card.small{width:35px;height:49px;font-size:12px;padding:4px}.card.small .suit{font-size:14px}.card.selected{transform:translateY(-32px);z-index:20;box-shadow:0 0 0 3px var(--gold),0 12px 22px #0009;filter:brightness(1.04)}
 #myHand{width:min(100%,1000px);min-height:88px;padding:15px 12px 10px;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 25px #0003;margin-bottom:13px}#aiHands{display:none}#actionPanel{min-height:26px;text-align:center;margin-bottom:8px;color:var(--gold);font-size:13px}#controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:1px solid #e9d49b;border-radius:9px;padding:10px 24px;background:linear-gradient(180deg,#f2d995,#d7b568);color:#173426;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px #0003;transition:transform .12s,filter .12s}button:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}button.sec{background:#164b39;color:#e8eee8;border-color:#54836b}button.debug{display:none}#log{width:min(100%,1000px);height:94px;overflow:auto;margin-top:14px;padding:10px 14px;background:#041c15b8;border:1px solid var(--line);border-radius:12px;color:#a9c2b7;font-size:12px;line-height:1.75}#log .my{color:#9bd4f3}#log .sys{color:var(--gold)}.typeBtn{margin:3px;padding:7px 13px;font-size:12px}
 @media(max-width:650px){body{padding:14px 8px}h1{font-size:20px}#table{height:380px;border-width:5px;border-radius:170px}.player{min-width:82px;padding:7px 8px}.player .name{font-size:12px}#p1{left:4px}#p3{right:4px}.playArea{width:62%}.card{width:37px;height:54px;font-size:12px;padding:4px}.card .suit{font-size:15px}#myHand{gap:2px;padding:12px 5px}.counterItem{gap:3px}.counterItem .mini-card{width:22px;height:28px}button{padding:9px 16px}}
 </style>
@@ -1033,7 +1033,8 @@ function playCards(player, cards, info) {
     G.lastPlay = { player, cards, info, wasLead };
     G.lastPlayer = player; G.passCount = 0;
     renderHand(); renderCounts(); renderPlayArea(); renderCounter(); renderAiHands();
-    log(`${playerName(player)} 出：${cards.map(cardName).join(' ')}`, player === 0 ? 'my' : '');
+    const wildText = info?.wildAssign?.length ? `（赖子替代：${info.wildAssign.map(a => `${a.suit}${a.rank}`).join('、')}）` : '';
+    log(`${playerName(player)} 出：${cards.map(cardName).join(' ')}${wildText}`, player === 0 ? 'my' : '');
     if (G.hands[player].length === 0) { G.finished.push(player); renderRanks(); log(`${playerName(player)} 第 ${G.finished.length} 名出完！`, 'sys'); }
     checkGameOver();
 }
@@ -1106,6 +1107,41 @@ function typeName(info) {
     return name;
 }
 
+function wildAssignLabel(info) {
+    const assigns = info.wildAssign || [];
+    if (!assigns.length) return '无需赖子替代';
+    return assigns.map(a => {
+        const card = cardsById(a.cardId);
+        return `${card ? cardName(card) : '赖子'} → ${a.suit}${a.rank}`;
+    }).join('，');
+}
+function cardsById(id) { return [...G.hands[0], ...(G.lastPlay?.cards || [])].find(c => c.id === id) || null; }
+function chooseWildAssignment(cards, info, callback) {
+    if (!info.wildAssign || !info.wildAssign.length) { callback(info); return; }
+    // 从同一选牌集合的合法识别结果中列出可选替代方式，确保替代后牌型仍合法。
+    let options = identifyAll(cards).filter(x => x.type === info.type && x.wildAssign && x.wildAssign.length);
+    if (info.type === 'bomb') options = options.filter(x => x.bombRank === info.bombRank && x.bombSize === info.bombSize);
+    if (info.type === 'flush_straight') options = options.filter(x => x.level === info.level);
+    if (!options.length) options = [info];
+    const keyOf = x => x.wildAssign.map(a => `${a.cardId}:${a.rank}:${a.suit}`).sort().join('|');
+    const unique = [...new Map(options.map(x => [keyOf(x), x])).values()];
+    const panel = document.getElementById('actionPanel');
+    panel.innerHTML = `<div style="color:var(--gold);font-weight:bold;margin-bottom:7px">选择赖子替代的牌</div><select id="wildAssignSelect" style="max-width:95%;padding:8px;border-radius:8px;margin:4px;background:#f7f1e5;color:#173426">${unique.map((x,i)=>`<option value="${i}">${wildAssignLabel(x)}</option>`).join('')}</select><div style="margin-top:8px"><button id="wildConfirmBtn">确认出牌</button><button class="sec" id="wildCancelBtn">取消</button></div>`;
+    document.getElementById('wildConfirmBtn').onclick = () => {
+        const chosen = unique[parseInt(document.getElementById('wildAssignSelect').value,10)] || info;
+        panel.innerHTML = ''; callback(chosen);
+    };
+    document.getElementById('wildCancelBtn').onclick = () => { panel.innerHTML = ''; updateControls(); };
+}
+function commitPlayerPlay(cards, info) {
+    if (G.lastPlay && !canBeat(info, G.lastPlay.info)) { log('压不过上家', 'sys'); return; }
+    chooseWildAssignment(cards, info, chosenInfo => {
+        G.selected.clear();
+        playCards(0, cards, chosenInfo);
+        if (G.playing) advanceTurn();
+    });
+}
+
 function showTypeSelect(cards, allInfos) {
     const panel = document.getElementById('actionPanel');
     let html = '<h2 style="font-size:14px;color:#8b949e;margin-bottom:6px">选择牌型</h2>';
@@ -1121,10 +1157,8 @@ function showTypeSelect(cards, allInfos) {
         btn.onclick = () => {
             const idx = parseInt(btn.dataset.idx);
             const info = allInfos[idx];
-            G.selected.clear(); panel.innerHTML = '';
-            playCards(0, cards, info);
-            if (!G.playing) return;
-            advanceTurn();
+            panel.innerHTML = '';
+            commitPlayerPlay(cards, info);
         };
     });
     document.getElementById('cancelTypeBtn').onclick = () => { panel.innerHTML = ''; updateControls(); };
@@ -1139,10 +1173,7 @@ document.getElementById('playBtn').onclick = () => {
     if (allInfos.length === 1) {
         const info = allInfos[0];
         if (G.lastPlay && !canBeat(info, G.lastPlay.info)) { log('压不过上家', 'sys'); return; }
-        G.selected.clear();
-        playCards(0, cards, info);
-        if (!G.playing) return;
-        advanceTurn();
+        commitPlayerPlay(cards, info);
     } else {
         showTypeSelect(cards, allInfos);
     }
