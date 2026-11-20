@@ -4,52 +4,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>掼蛋 · 简化单机版（调试）</title>
+<title>掼蛋 · 智能单机对战</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "Microsoft YaHei", Arial, sans-serif; background: #1a3a2a; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 8px; user-select: none; }
-h1 { font-size: 16px; color: #f0c040; margin-bottom: 6px; font-weight: normal; }
-#counter { width: 100%; max-width: 900px; background: rgba(10, 31, 18, 0.95); border: 1px solid #2a5a3a; border-radius: 8px; padding: 4px 6px; margin-bottom: 8px; display: flex; justify-content: center; flex-wrap: wrap; gap: 3px; }
-.counterItem { display: flex; flex-direction: column; align-items: center; min-width: 30px; }
-.counterItem .mini-card { width: 26px; height: 34px; background: #fff; color: #d00; border-radius: 3px; border: 1px solid #999; font-size: 12px; font-weight: bold; line-height: 1.1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.counterItem .mini-card.joker { color: #000; }
-.counterItem .left-num { font-size: 11px; color: #8ecae6; margin-top: 2px; }
-.counterItem .left-num.done { color: #555; }
-#table { position: relative; width: 100%; max-width: 900px; height: 420px; background: #0f2a1c; border-radius: 12px; border: 2px solid #2a5a3a; margin-bottom: 8px; }
-.player { position: absolute; text-align: center; font-size: 13px; }
-.player .name { color: #8ecae6; margin-bottom: 2px; }
-.player .count { color: #aaa; font-size: 12px; }
-.player .rank-tag { color: #f0c040; font-size: 12px; font-weight: bold; }
-#p0 { bottom: 8px; left: 50%; transform: translateX(-50%); }
-#p1 { left: 8px; top: 50%; transform: translateY(-50%); }
-#p2 { top: 8px; left: 50%; transform: translateX(-50%); }
-#p3 { right: 8px; top: 50%; transform: translateY(-50%); }
-.playArea { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 200px; min-height: 80px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
-.card { display: inline-block; width: 40px; height: 56px; background: #fff; color: #000; border-radius: 5px; border: 1px solid #999; font-size: 14px; font-weight: bold; line-height: 1.1; padding: 3px; position: relative; cursor: pointer; transition: transform 0.1s; }
-.card.red { color: #d00; }
-.card.small { width: 30px; height: 42px; font-size: 11px; padding: 2px; }
-.card.selected { transform: translateY(-12px); box-shadow: 0 0 8px #f0c040; }
-.card .suit { font-size: 16px; }
-#myHand { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; min-height: 70px; padding: 5px; background: #0a1f12; border-radius: 8px; width: 100%; max-width: 900px; margin-bottom: 8px; }
-#aiHands { width: 100%; max-width: 900px; background: #0a1f12; border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; font-size: 13px; }
-#aiHands .ai-row { margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
-#aiHands .ai-label { color: #8ecae6; min-width: 70px; font-weight: bold; }
-#aiHands .ai-row .card.small { width: 34px; height: 46px; font-size: 12px; }
-#controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-button { padding: 8px 18px; font-size: 15px; border: none; border-radius: 6px; background: #f0c040; color: #1a3a2a; font-weight: bold; cursor: pointer; font-family: inherit; }
-button:hover { opacity: 0.85; }
-button:disabled { background: #555; color: #999; cursor: not-allowed; }
-button.sec { background: #4a7a5a; color: #fff; }
-button.debug { background: #8a6a3a; color: #fff; }
-#log { width: 100%; max-width: 900px; height: 60px; overflow-y: auto; background: #0a1f12; border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 1.6; color: #aaa; margin-top: 8px; }
-#log .my { color: #8ecae6; }
-#log .sys { color: #f0c040; }
-#actionPanel { margin-bottom: 8px; text-align: center; }
-#actionPanel button { margin: 3px; }
+:root{--felt:#0b3a2b;--felt2:#08291f;--gold:#e7c77b;--cream:#f7f1e5;--muted:#a9c2b7;--panel:rgba(4,24,18,.78);--line:rgba(231,199,123,.25)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:22px 16px 28px;background:radial-gradient(ellipse at 50% 35%,#176247 0%,var(--felt) 52%,#041a13 100%);color:var(--cream);font-family:"Microsoft YaHei",Arial,sans-serif;display:flex;flex-direction:column;align-items:center;user-select:none}
+h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 0 5px;text-shadow:0 2px 12px #0008}body:before{content:'GUANDAN  ·  FOUR PLAYER TABLE';font-size:10px;letter-spacing:4px;color:#9bb9a8;margin-bottom:18px}
+#counter{width:min(100%,1000px);display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px #0003}.counterItem{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}.counterItem .mini-card{width:26px;height:32px;background:#fff;color:#222;border-radius:4px;border:1px solid #ddd;display:grid;place-items:center;font-size:10px;font-weight:bold}.counterItem .mini-card.joker{color:#9c2020}.counterItem .left-num{font-variant-numeric:tabular-nums;color:var(--gold)}.counterItem .left-num.done{color:#60796d}
+#table{position:relative;width:min(100%,1000px);height:440px;border:8px solid #735b36;border-radius:220px;background:radial-gradient(ellipse at center,#176449 0%,#0c4934 62%,#073323 100%);box-shadow:inset 0 0 0 2px #c5a66a55,inset 0 0 50px #00180f99,0 18px 40px #0006;margin-bottom:16px}.player{position:absolute;min-width:110px;text-align:center;padding:9px 14px;border:1px solid transparent;border-radius:12px;background:#06271e99;box-shadow:0 5px 15px #0018}.player .name{font-size:14px;color:#e7e2d2;font-weight:600}.player .count{font-size:12px;color:#b8cfc3;margin-top:4px}.player .rank-tag{display:block;color:var(--gold);font-size:11px;margin-top:3px}.player.active{border-color:var(--gold);box-shadow:0 0 0 2px #e7c77b22,0 0 22px #e7c77b44}.player.active .name{color:var(--gold)}#p0{bottom:12px;left:50%;transform:translateX(-50%)}#p1{left:22px;top:50%;transform:translateY(-50%)}#p2{top:10px;left:50%;transform:translateX(-50%)}#p3{right:22px;top:50%;transform:translateY(-50%)}
+.playArea{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;min-height:95px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px}.card{display:inline-flex;flex-direction:column;justify-content:space-between;width:47px;height:66px;background:linear-gradient(145deg,#fff,#eee9df);color:#18221c;border:1px solid #d7d0c3;border-radius:7px;font-size:15px;font-weight:800;line-height:1;padding:6px;position:relative;cursor:pointer;box-shadow:0 3px 7px #0018;transition:transform .13s,box-shadow .13s}.card.red{color:#c52b32}.card .suit{font-size:19px;align-self:flex-end}.card.small{width:35px;height:49px;font-size:12px;padding:4px}.card.small .suit{font-size:14px}.card.selected{transform:translateY(-13px);box-shadow:0 0 0 2px var(--gold),0 8px 16px #0007}
+#myHand{width:min(100%,1000px);min-height:88px;padding:15px 12px 10px;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 25px #0003;margin-bottom:13px}#aiHands{display:none}#actionPanel{min-height:26px;text-align:center;margin-bottom:8px;color:var(--gold);font-size:13px}#controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:1px solid #e9d49b;border-radius:9px;padding:10px 24px;background:linear-gradient(180deg,#f2d995,#d7b568);color:#173426;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px #0003;transition:transform .12s,filter .12s}button:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}button.sec{background:#164b39;color:#e8eee8;border-color:#54836b}button.debug{display:none}#log{width:min(100%,1000px);height:94px;overflow:auto;margin-top:14px;padding:10px 14px;background:#041c15b8;border:1px solid var(--line);border-radius:12px;color:#a9c2b7;font-size:12px;line-height:1.75}#log .my{color:#9bd4f3}#log .sys{color:var(--gold)}.typeBtn{margin:3px;padding:7px 13px;font-size:12px}
+@media(max-width:650px){body{padding:14px 8px}h1{font-size:20px}#table{height:380px;border-width:5px;border-radius:170px}.player{min-width:82px;padding:7px 8px}.player .name{font-size:12px}#p1{left:4px}#p3{right:4px}.playArea{width:62%}.card{width:37px;height:54px;font-size:12px;padding:4px}.card .suit{font-size:15px}#myHand{gap:2px;padding:12px 5px}.counterItem{gap:3px}.counterItem .mini-card{width:22px;height:28px}button{padding:9px 16px}}
 </style>
 </head>
 <body>
-<h1>掼蛋 · 简化单机版（调试模式）</h1>
+<h1>掼蛋 · 智能对战</h1>
 <div id="counter"></div>
 <div id="table">
     <div class="player" id="p1"><div class="name">AI 左 <span class="rank-tag" id="r1"></span></div><div class="count" id="c1">27</div></div>
@@ -58,17 +26,17 @@ button.debug { background: #8a6a3a; color: #fff; }
     <div class="playArea" id="playArea"></div>
     <div class="player" id="p0"><div class="name">我 <span class="rank-tag" id="r0"></span></div><div class="count" id="c0">27</div></div>
 </div>
-<div id="aiHands"></div>
+
 <div id="myHand"></div>
 <div id="actionPanel"></div>
 <div id="controls">
     <button id="playBtn">出牌</button>
     <button id="passBtn" class="sec">不出</button>
     <button id="hintBtn" class="sec">提示</button>
-    <button id="nextBtn" class="debug">AI 下一步</button>
     <button id="restartBtn" class="sec">重开</button>
 </div>
 <div id="log"></div>
+<div style="width:min(100%,1000px);text-align:center;color:#789889;font-size:10px;margin-top:10px;letter-spacing:1px">AI 自动行动 · 对手手牌隐藏 · 本地浏览器运行</div>
 
 <script>
 const SUITS = ['♠', '♥', '♣', '♦'];
@@ -1022,17 +990,7 @@ function renderPlayArea() {
     if (!G.lastPlay) { el.innerHTML = ''; return; }
     el.innerHTML = G.lastPlay.cards.map(c => cardHTML(c, true)).join('');
 }
-function renderAiHands() {
-    const el = document.getElementById('aiHands');
-    let html = '';
-    for (let p = 1; p <= 3; p++) {
-        const sorted = [...G.hands[p]].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
-        html += `<div class="ai-row"><span class="ai-label">${playerName(p)} (${sorted.length})</span>`;
-        html += sorted.map(c => cardHTML(c, true)).join('');
-        html += `</div>`;
-    }
-    el.innerHTML = html;
-}
+function renderAiHands() { /* AI 手牌对玩家隐藏 */ }
 function log(msg, cls = '') {
     const el = document.getElementById('log');
     const div = document.createElement('div');
@@ -1104,7 +1062,7 @@ function updateControls() {
     document.getElementById('playBtn').disabled = !myTurn;
     document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay;
     document.getElementById('hintBtn').disabled = !myTurn;
-    document.getElementById('nextBtn').disabled = !G.playing || G.currentPlayer === 0;
+    for (let i = 0; i < 4; i++) document.getElementById('p' + i).classList.toggle('active', G.playing && G.currentPlayer === i);
 }
 function advanceTurn() {
     if (!G.playing) return;
@@ -1118,6 +1076,9 @@ function advanceTurn() {
         while (G.hands[next].length === 0 && count < 4) { next = (next + 1) % 4; count++; }
     }
     G.currentPlayer = next; updateControls();
+    if (G.playing && G.currentPlayer !== 0) {
+        window.setTimeout(() => { if (G.playing && G.currentPlayer !== 0) aiTurn(); }, 520);
+    }
 }
 
 function typeName(info) {
@@ -1190,12 +1151,6 @@ document.getElementById('hintBtn').onclick = () => {
     hint.forEach(c => G.selected.add(c.id));
     renderHand();
     log(`提示：${hint.map(cardName).join(' ')}`, 'sys');
-};
-
-document.getElementById('nextBtn').onclick = () => {
-    if (!G.playing) return;
-    if (G.currentPlayer === 0) { log('轮到你出牌', 'sys'); return; }
-    aiTurn();
 };
 
 document.getElementById('restartBtn').onclick = () => { document.getElementById('log').innerHTML = ''; deal(); };
