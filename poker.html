@@ -27,7 +27,7 @@ h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 
 .card .joker-art{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:60%;height:66%;opacity:.92;pointer-events:none}
 .card.small .joker-art{width:62%;height:68%}
 #myHand{width:min(100%,1000px);min-height:88px;padding:15px 12px 10px;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 25px #0003;margin-bottom:13px}.handGroup{display:block;position:relative;flex:0 0 47px;width:47px;margin:0;height:66px;overflow:visible}.handGroup .card{position:absolute;left:0;top:0;margin:0;transition:transform .13s,box-shadow .13s}.handGroup .card:not(:first-child){margin:0}.handGroup .card.selected{transform:translateY(-32px)}.handGroup .card.pile-card{top:var(--pile-top);z-index:var(--pile-z)}#aiHands{display:none}#actionPanel{min-height:26px;text-align:center;margin-bottom:8px;color:var(--gold);font-size:13px}#actionPanel .sub{color:#a9c2b7;font-size:12px}#actionPanel b{color:var(--gold)}#actionPanel.match-over b{color:#ffd76e;font-size:15px}#nextBtn.show{animation:nextPulse 1.6s ease-in-out infinite}@keyframes nextPulse{0%,100%{box-shadow:0 0 0 0 #ffd76e00}50%{box-shadow:0 0 0 5px #ffd76e55}}#controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:1px solid #e9d49b;border-radius:9px;padding:10px 24px;background:linear-gradient(180deg,#f2d995,#d7b568);color:#173426;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px #0003;transition:transform .12s,filter .12s}button:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}button.sec{background:#164b39;color:#e8eee8;border-color:#54836b}button.debug{display:none}#log{width:min(100%,1000px);height:94px;overflow:auto;margin-top:14px;padding:10px 14px;background:#041c15b8;border:1px solid var(--line);border-radius:12px;color:#a9c2b7;font-size:12px;line-height:1.75}#log .my{color:#9bd4f3}#log .sys{color:var(--gold)}.typeBtn{margin:3px;padding:7px 13px;font-size:12px}
-#tributeModal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#02130dcc;backdrop-filter:blur(3px);padding:20px}#tributeModal.hidden{display:none}.tribute-box{width:min(440px,94vw);max-height:82vh;overflow:auto;background:linear-gradient(180deg,#0f3b2d,#082a20);border:1px solid #e9d49b;border-radius:16px;padding:20px 22px;box-shadow:0 20px 60px #000a;text-align:center}.tribute-box h3{margin:0 0 8px;color:var(--gold);font-size:18px;letter-spacing:2px}.tribute-box p{margin:0 0 14px;color:#dbe8df;font-size:13px;line-height:1.7}.tribute-box p b{color:var(--gold)}#tributeChoices{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}#tributeChoices .choice{min-width:54px;padding:9px 10px;border-radius:10px;border:1px solid #54836b;background:#f7f1e5;color:#173426;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px #0004}#tributeChoices .choice:hover{background:#fff8e6;border-color:#e9d49b;transform:translateY(-2px)}#tributeChoices .choice .suit-red{color:#c0392b}@media(max-width:650px){body{padding:14px 8px}h1{font-size:20px}#table{height:380px;border-width:5px;border-radius:170px}.player{min-width:82px;padding:7px 8px}.player .name{font-size:12px}#p1{left:4px}#p3{right:4px}.playArea{width:62%}.card{width:37px;height:54px;font-size:12px;padding:4px}.card .suit{font-size:15px}#myHand{gap:0;padding:12px 5px}.handGroup{flex-basis:37px;width:37px;height:54px;margin:0}.handGroup .card.pile-card{top:var(--pile-top)}.counterItem{gap:3px}.counterItem .mini-card{width:22px;height:28px}button{padding:9px 16px}}
+#tributeModal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#02130dcc;backdrop-filter:blur(3px);padding:20px}#tributeModal.hidden{display:none}.tribute-box{width:min(440px,94vw);max-height:82vh;overflow:auto;background:linear-gradient(180deg,#0f3b2d,#082a20);border:1px solid #e9d49b;border-radius:16px;padding:20px 22px;box-shadow:0 20px 60px #000a;text-align:center}.tribute-box h3{margin:0 0 8px;color:var(--gold);font-size:18px;letter-spacing:2px}.tribute-box p{margin:0 0 14px;color:#dbe8df;font-size:13px;line-height:1.7}.tribute-box p b{color:var(--gold)}#tributeChoices{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}#tributeChoices .choice{min-width:54px;padding:9px 10px;border-radius:10px;border:1px solid #54836b;background:#f7f1e5;color:#173426;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px #0004}#tributeChoices .choice:hover{background:#fff8e6;border-color:#e9d49b;transform:translateY(-2px)}#tributeChoices .choice .suit-red{color:#c0392b}.tribute-actions{margin-top:16px;display:flex;justify-content:center}@media(max-width:650px){body{padding:14px 8px}h1{font-size:20px}#table{height:380px;border-width:5px;border-radius:170px}.player{min-width:82px;padding:7px 8px}.player .name{font-size:12px}#p1{left:4px}#p3{right:4px}.playArea{width:62%}.card{width:37px;height:54px;font-size:12px;padding:4px}.card .suit{font-size:15px}#myHand{gap:0;padding:12px 5px}.handGroup{flex-basis:37px;width:37px;height:54px;margin:0}.handGroup .card.pile-card{top:var(--pile-top)}.counterItem{gap:3px}.counterItem .mini-card{width:22px;height:28px}button{padding:9px 16px}}
 </style>
 </head>
 <body>
@@ -49,6 +49,7 @@ h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 
         <h3>还贡</h3>
         <p id="tributeMsg"></p>
         <div id="tributeChoices"></div>
+        <div class="tribute-actions"><button id="tributeBackBtn" class="sec">再看看手牌</button></div>
     </div>
 </div>
 <div id="controls">
@@ -1433,8 +1434,17 @@ function resetMatch() {
 // ==================== 进贡 / 还贡 ====================
 function isReturnEligible(card) {
     if (isWild(card) || card.suit === 'JOKER') return false;
+    if (card.rank === LEVEL) return false; // 级牌不能还贡（含非红桃级牌）
     const v = rankValueForStraight(card.rank);
     return v >= 2 && v <= 10;
+}
+// 还贡候选：优先 10 以下且不是级牌的牌；没有时再退而求其次
+function returnCardCandidates(hand) {
+    let pool = hand.filter(isReturnEligible);
+    if (!pool.length) pool = hand.filter(c => !isWild(c) && c.suit !== 'JOKER' && c.rank !== LEVEL);
+    if (!pool.length) pool = hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
+    if (!pool.length) pool = hand.slice();
+    return pool;
 }
 function pickTributeCard(hand) {
     // 进贡：红桃级牌（赖子）除外，进最大的一张
@@ -1443,9 +1453,8 @@ function pickTributeCard(hand) {
     return [...pool].sort((a, b) => rankValue(b.rank) - rankValue(a.rank))[0] || null;
 }
 function pickReturnCard(hand) {
-    // 还贡：优先还 10 以下最小的牌
-    const eligible = hand.filter(isReturnEligible);
-    const pool = eligible.length ? eligible : hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
+    // 还贡：还最小的非级牌；没有合法牌时按候选顺序退让
+    const pool = returnCardCandidates(hand);
     return [...pool].sort((a, b) => rankValue(a.rank) - rankValue(b.rank))[0] || null;
 }
 function applyTribute() {
@@ -1488,23 +1497,32 @@ function applyTribute() {
 
     for (let i = 0; i < 4; i++) G.hands[i].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
     renderHand(); renderCounts(); renderCounter(); renderLevelBar();
-    if (G.pendingReturns.length) showTributeReturnPanel();
+    if (G.pendingReturns.length) showTributeReturnPrompt();
     else finishTribute();
 }
 function hideTributeModal() {
     document.getElementById('tributeModal').classList.add('hidden');
     document.getElementById('tributeChoices').innerHTML = '';
 }
-function showTributeReturnPanel() {
+// 先让玩家看牌：只在操作区提示，不立刻弹窗挡住手牌
+function showTributeReturnPrompt() {
     const r = G.pendingReturns[0];
     if (!r) { finishTribute(); return; }
-    const hand = G.hands[0];
-    let eligible = hand.filter(isReturnEligible);
-    if (!eligible.length) eligible = hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
+    const panel = document.getElementById('actionPanel');
+    panel.className = '';
+    panel.innerHTML = `<div>你收到 <b>${playerName(r.payer)}</b> 进贡的 <b>${cardName(r.card)}</b>。<br>请先查看手牌，看完后再选择还贡牌。</div>
+        <button id="openTributeBtn" style="margin-top:8px">选择还贡牌</button>`;
+    document.getElementById('openTributeBtn').onclick = openTributeModal;
+    window.setTimeout(() => document.getElementById('myHand').scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
+}
+function openTributeModal() {
+    const r = G.pendingReturns[0];
+    if (!r) { finishTribute(); return; }
+    const candidates = returnCardCandidates(G.hands[0]);
     document.getElementById('tributeMsg').innerHTML =
-        `你收到 <b>${playerName(r.payer)}</b> 进贡的 <b>${cardName(r.card)}</b>，请选择一张不大于 10 的牌还贡。`;
+        `你收到 <b>${playerName(r.payer)}</b> 进贡的 <b>${cardName(r.card)}</b>，请选择一张还贡牌（不能还级牌，优先 10 以下的牌）。`;
     const box = document.getElementById('tributeChoices');
-    box.innerHTML = eligible.map(c => {
+    box.innerHTML = candidates.map(c => {
         const red = c.suit === '♥' || c.suit === '♦';
         const label = c.suit === 'JOKER' ? c.rank : `${c.rank}<span class="${red ? 'suit-red' : ''}">${c.suit}</span>`;
         return `<button class="choice" data-id="${c.id}">${label}</button>`;
@@ -1512,6 +1530,10 @@ function showTributeReturnPanel() {
     box.querySelectorAll('.choice').forEach(btn => {
         btn.onclick = () => returnTributeCard(parseInt(btn.dataset.id, 10));
     });
+    document.getElementById('tributeBackBtn').onclick = () => {
+        hideTributeModal();
+        showTributeReturnPrompt();
+    };
     document.getElementById('tributeModal').classList.remove('hidden');
 }
 function returnTributeCard(id) {
@@ -1525,12 +1547,17 @@ function returnTributeCard(id) {
     G.pendingReturns.shift();
     hideTributeModal();
     renderHand(); renderCounts();
-    if (G.pendingReturns.length) showTributeReturnPanel();
+    if (G.pendingReturns.length) showTributeReturnPrompt();
     else finishTribute();
 }
 function finishTribute() {
     G.pendingReturns = [];
     G.awaitTribute = false;
+    hideTributeModal();
+    // 清掉“选择还贡牌”提示，避免还贡完成后按钮残留
+    const panel = document.getElementById('actionPanel');
+    panel.className = '';
+    panel.innerHTML = '';
     for (let i = 0; i < 4; i++) G.hands[i].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
     renderHand(); renderCounts(); renderCounter(); renderLevelBar();
     beginPlay(G.tributeStarter ?? 0);
