@@ -9,6 +9,8 @@
 *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:22px 16px 28px;background:radial-gradient(ellipse at 50% 35%,#176247 0%,var(--felt) 52%,#041a13 100%);color:var(--cream);font-family:"Microsoft YaHei",Arial,sans-serif;display:flex;flex-direction:column;align-items:center;user-select:none}
 h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 0 5px;text-shadow:0 2px 12px #0008}body:before{content:'GUANDAN  ·  FOUR PLAYER TABLE';font-size:10px;letter-spacing:4px;color:#9bb9a8;margin-bottom:18px}
 #counter{width:min(100%,1000px);display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px #0003}.counterItem{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}.counterItem .mini-card{width:26px;height:32px;background:#fff;color:#222;border-radius:4px;border:1px solid #ddd;display:grid;place-items:center;font-size:10px;font-weight:bold}.counterItem .mini-card.joker{color:#9c2020}.counterItem .left-num{font-variant-numeric:tabular-nums;color:var(--gold)}.counterItem .left-num.done{color:#60796d}
+#levelBar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;margin:0 0 12px;color:var(--muted);font-size:12px;letter-spacing:.5px}#levelBar .lv-pill{padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:#041c15b8;white-space:nowrap}#levelBar b{color:var(--gold);font-size:13px}#levelBar .cur{background:linear-gradient(180deg,#f2d995,#d7b568);color:#173426;border-color:#e9d49b;font-weight:700}#levelBar .cur b{color:#173426}
+.player .team-tag{font-size:10px;font-weight:400;color:#9bb9a8;margin-left:2px}
 #table{position:relative;width:min(100%,1000px);height:440px;border:8px solid #735b36;border-radius:220px;background:radial-gradient(ellipse at center,#176449 0%,#0c4934 62%,#073323 100%);box-shadow:inset 0 0 0 2px #c5a66a55,inset 0 0 50px #00180f99,0 18px 40px #0006;margin-bottom:16px}.player{position:absolute;min-width:110px;text-align:center;padding:9px 14px;border:1px solid transparent;border-radius:12px;background:#06271e99;box-shadow:0 5px 15px #0018}.player .name{font-size:14px;color:#e7e2d2;font-weight:600}.player .count{font-size:12px;color:#b8cfc3;margin-top:4px}.player .rank-tag{display:block;color:var(--gold);font-size:11px;margin-top:3px}.player.active{border-color:var(--gold);box-shadow:0 0 0 2px #e7c77b22,0 0 22px #e7c77b44}.player.active .name{color:var(--gold)}#p0{bottom:12px;left:50%;transform:translateX(-50%)}#p1{left:22px;top:50%;transform:translateY(-50%)}#p2{top:10px;left:50%;transform:translateX(-50%)}#p3{right:22px;top:50%;transform:translateY(-50%)}
 .playArea{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;min-height:95px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px}.card{display:inline-flex;flex-direction:column;justify-content:space-between;width:47px;height:66px;background:linear-gradient(145deg,#fff,#eee9df);color:#18221c;border:1px solid #d7d0c3;border-radius:7px;font-size:15px;font-weight:800;line-height:1;padding:6px;position:relative;cursor:pointer;box-shadow:0 3px 7px #0018;transition:transform .13s,box-shadow .13s}.card.red{color:#c52b32}.card .suit{font-size:19px;align-self:flex-end}.card.small{width:35px;height:49px;font-size:12px;padding:4px}.card.small .suit{font-size:14px}.card.selected{transform:translateY(-32px);z-index:20;box-shadow:0 0 0 3px var(--gold),0 12px 22px #0009;filter:brightness(1.04)}
 .card .corner{position:absolute;display:flex;flex-direction:row;align-items:center;justify-content:center;line-height:1;font-weight:800;gap:1px}
@@ -24,23 +26,31 @@ h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 
 /* 大小王中间的小丑帽图案 */
 .card .joker-art{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:60%;height:66%;opacity:.92;pointer-events:none}
 .card.small .joker-art{width:62%;height:68%}
-#myHand{width:min(100%,1000px);min-height:88px;padding:15px 12px 10px;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 25px #0003;margin-bottom:13px}.handGroup{display:block;position:relative;flex:0 0 47px;width:47px;margin:0;height:66px;overflow:visible}.handGroup .card{position:absolute;left:0;top:0;margin:0;transition:transform .13s,box-shadow .13s}.handGroup .card:not(:first-child){margin:0}.handGroup .card.selected{transform:translateY(-32px)}.handGroup .card.pile-card{top:var(--pile-top);z-index:var(--pile-z)}#aiHands{display:none}#actionPanel{min-height:26px;text-align:center;margin-bottom:8px;color:var(--gold);font-size:13px}#controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:1px solid #e9d49b;border-radius:9px;padding:10px 24px;background:linear-gradient(180deg,#f2d995,#d7b568);color:#173426;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px #0003;transition:transform .12s,filter .12s}button:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}button.sec{background:#164b39;color:#e8eee8;border-color:#54836b}button.debug{display:none}#log{width:min(100%,1000px);height:94px;overflow:auto;margin-top:14px;padding:10px 14px;background:#041c15b8;border:1px solid var(--line);border-radius:12px;color:#a9c2b7;font-size:12px;line-height:1.75}#log .my{color:#9bd4f3}#log .sys{color:var(--gold)}.typeBtn{margin:3px;padding:7px 13px;font-size:12px}
-@media(max-width:650px){body{padding:14px 8px}h1{font-size:20px}#table{height:380px;border-width:5px;border-radius:170px}.player{min-width:82px;padding:7px 8px}.player .name{font-size:12px}#p1{left:4px}#p3{right:4px}.playArea{width:62%}.card{width:37px;height:54px;font-size:12px;padding:4px}.card .suit{font-size:15px}#myHand{gap:0;padding:12px 5px}.handGroup{flex-basis:37px;width:37px;height:54px;margin:0}.handGroup .card.pile-card{top:var(--pile-top)}.counterItem{gap:3px}.counterItem .mini-card{width:22px;height:28px}button{padding:9px 16px}}
+#myHand{width:min(100%,1000px);min-height:88px;padding:15px 12px 10px;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 25px #0003;margin-bottom:13px}.handGroup{display:block;position:relative;flex:0 0 47px;width:47px;margin:0;height:66px;overflow:visible}.handGroup .card{position:absolute;left:0;top:0;margin:0;transition:transform .13s,box-shadow .13s}.handGroup .card:not(:first-child){margin:0}.handGroup .card.selected{transform:translateY(-32px)}.handGroup .card.pile-card{top:var(--pile-top);z-index:var(--pile-z)}#aiHands{display:none}#actionPanel{min-height:26px;text-align:center;margin-bottom:8px;color:var(--gold);font-size:13px}#actionPanel .sub{color:#a9c2b7;font-size:12px}#actionPanel b{color:var(--gold)}#actionPanel.match-over b{color:#ffd76e;font-size:15px}#nextBtn.show{animation:nextPulse 1.6s ease-in-out infinite}@keyframes nextPulse{0%,100%{box-shadow:0 0 0 0 #ffd76e00}50%{box-shadow:0 0 0 5px #ffd76e55}}#controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}button{border:1px solid #e9d49b;border-radius:9px;padding:10px 24px;background:linear-gradient(180deg,#f2d995,#d7b568);color:#173426;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px #0003;transition:transform .12s,filter .12s}button:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}button.sec{background:#164b39;color:#e8eee8;border-color:#54836b}button.debug{display:none}#log{width:min(100%,1000px);height:94px;overflow:auto;margin-top:14px;padding:10px 14px;background:#041c15b8;border:1px solid var(--line);border-radius:12px;color:#a9c2b7;font-size:12px;line-height:1.75}#log .my{color:#9bd4f3}#log .sys{color:var(--gold)}.typeBtn{margin:3px;padding:7px 13px;font-size:12px}
+#tributeModal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#02130dcc;backdrop-filter:blur(3px);padding:20px}#tributeModal.hidden{display:none}.tribute-box{width:min(440px,94vw);max-height:82vh;overflow:auto;background:linear-gradient(180deg,#0f3b2d,#082a20);border:1px solid #e9d49b;border-radius:16px;padding:20px 22px;box-shadow:0 20px 60px #000a;text-align:center}.tribute-box h3{margin:0 0 8px;color:var(--gold);font-size:18px;letter-spacing:2px}.tribute-box p{margin:0 0 14px;color:#dbe8df;font-size:13px;line-height:1.7}.tribute-box p b{color:var(--gold)}#tributeChoices{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}#tributeChoices .choice{min-width:54px;padding:9px 10px;border-radius:10px;border:1px solid #54836b;background:#f7f1e5;color:#173426;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px #0004}#tributeChoices .choice:hover{background:#fff8e6;border-color:#e9d49b;transform:translateY(-2px)}#tributeChoices .choice .suit-red{color:#c0392b}@media(max-width:650px){body{padding:14px 8px}h1{font-size:20px}#table{height:380px;border-width:5px;border-radius:170px}.player{min-width:82px;padding:7px 8px}.player .name{font-size:12px}#p1{left:4px}#p3{right:4px}.playArea{width:62%}.card{width:37px;height:54px;font-size:12px;padding:4px}.card .suit{font-size:15px}#myHand{gap:0;padding:12px 5px}.handGroup{flex-basis:37px;width:37px;height:54px;margin:0}.handGroup .card.pile-card{top:var(--pile-top)}.counterItem{gap:3px}.counterItem .mini-card{width:22px;height:28px}button{padding:9px 16px}}
 </style>
 </head>
 <body>
 <h1>掼蛋 · 智能对战</h1>
+<div id="levelBar"></div>
 <div id="counter"></div>
 <div id="table">
-    <div class="player" id="p1"><div class="name">AI 左 <span class="rank-tag" id="r1"></span></div><div class="count" id="c1">27</div></div>
-    <div class="player" id="p2"><div class="name">AI 对家 <span class="rank-tag" id="r2"></span></div><div class="count" id="c2">27</div></div>
-    <div class="player" id="p3"><div class="name">AI 右 <span class="rank-tag" id="r3"></span></div><div class="count" id="c3">27</div></div>
+    <div class="player" id="p1"><div class="name">AI 左 <span class="team-tag">对方</span> <span class="rank-tag" id="r1"></span></div><div class="count" id="c1">27</div></div>
+    <div class="player" id="p2"><div class="name">AI 对家 <span class="team-tag">我方</span> <span class="rank-tag" id="r2"></span></div><div class="count" id="c2">27</div></div>
+    <div class="player" id="p3"><div class="name">AI 右 <span class="team-tag">对方</span> <span class="rank-tag" id="r3"></span></div><div class="count" id="c3">27</div></div>
     <div class="playArea" id="playArea"></div>
-    <div class="player" id="p0"><div class="name">我 <span class="rank-tag" id="r0"></span></div><div class="count" id="c0">27</div></div>
+    <div class="player" id="p0"><div class="name">我 <span class="team-tag">我方</span> <span class="rank-tag" id="r0"></span></div><div class="count" id="c0">27</div></div>
 </div>
 
 <div id="myHand"></div>
 <div id="actionPanel"></div>
+<div id="tributeModal" class="hidden">
+    <div class="tribute-box">
+        <h3>还贡</h3>
+        <p id="tributeMsg"></p>
+        <div id="tributeChoices"></div>
+    </div>
+</div>
 <div id="controls">
     <button id="playBtn">出牌</button>
     <button id="passBtn" class="sec">不出</button>
@@ -51,6 +61,7 @@ h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 
     <button id="reorderCancelBtn" class="sec" style="display:none">取消</button>
     <button id="restoreSortBtn" class="sec">复原</button>
     <button id="restartBtn" class="sec">重开</button>
+    <button id="nextBtn" class="sec" style="display:none">下一局</button>
 </div>
 <div id="log"></div>
 <div style="width:min(100%,1000px);text-align:center;color:#789889;font-size:10px;margin-top:10px;letter-spacing:1px">AI 自动行动 · 对手手牌隐藏 · 本地浏览器运行</div>
@@ -58,7 +69,10 @@ h1{font-size:25px;letter-spacing:4px;color:var(--gold);font-weight:600;margin:0 
 <script>
 const SUITS = ['♠', '♥', '♣', '♦'];
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-const LEVEL = '2';
+const LEVEL_RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+// 当前本局的级牌（动态，2~A）；LEVEL 变化后，该点数的牌价值和红桃赖子都会跟着变。
+let LEVEL = '2';
+function levelRank(level) { return LEVEL_RANKS[Math.max(0, Math.min(LEVEL_RANKS.length - 1, level - 2))]; }
 
 function rankValue(rank) {
     if (rank === '大王') return 17;
@@ -386,7 +400,19 @@ const G = {
     aiSkipCounts: [0, 0, 0, 0],
     customCardGroups: [],
     reorderMode: false,
+    teamLevels: [2, 2],
+    level: 2,
+    handNo: 0,
+    matchOver: false,
+    handOver: false,
+    pendingNext: false,
+    pendingTribute: null,
+    pendingReturns: [],
+    awaitTribute: false,
+    tributeStarter: 0,
 };
+
+const AI_THINK_DELAY = 900;
 
 const COUNTER_ORDER = ['大王','小王','2','A','K','Q','J','10','9','8','7','6','5','4','3'];
 
@@ -398,7 +424,8 @@ function renderCounter() {
     for (const c of G.playedCards) played[c.rank] = (played[c.rank] || 0) + 1;
     const mine = {};
     for (const c of G.hands[0]) mine[c.rank] = (mine[c.rank] || 0) + 1;
-    el.innerHTML = COUNTER_ORDER.map(r => {
+    const order = ['大王','小王',LEVEL, ...['A','K','Q','J','10','9','8','7','6','5','4','3','2'].filter(r => r !== LEVEL)];
+    el.innerHTML = order.map(r => {
         const left = total[r] - (played[r] || 0) - (mine[r] || 0);
         const cls = left === 0 ? 'left-num done' : 'left-num';
         let cardDisplay;
@@ -1188,7 +1215,7 @@ function aiChooseMove(hand, seat, lastInfo, opts = {}) {
         bombs.sort((a, b) => aiMoveCost(a, hand, handCount) - aiMoveCost(b, hand, handCount));
         const opps = [0,1,2,3].filter(x => x !== seat && x !== partner && G.hands[x] && G.hands[x].length > 0);
         const oppMin = opps.length ? Math.min(...opps.map(x => G.hands[x].length)) : 99;
-        const urgent = oppMin <= 3 || hand.length <= 6 || aiIsBombType(lastInfo.type) || opts.hint;
+        const urgent = oppMin <= 3 || hand.length <= 6 || aiIsBombType(lastInfo.type) || opts.hint || (G.hands[partner].length === 0 && oppMin <= 5);
         return urgent ? bombs[0].cards : null;
     }
     return null;
@@ -1227,6 +1254,8 @@ function aiTurn() {
         return;
     }
 
+    // 队友的牌不压；只有自己能一把走完时才会在上面直接出完
+    if (G.lastPlay && G.lastPlayer === (p + 2) % 4) log('（队友的牌，不压）', 'sys');
     pass(p);
     if (!G.playing) return;
     advanceTurn();
@@ -1330,6 +1359,14 @@ function renderRanks() {
         else el.textContent = '';
     }
 }
+function renderLevelBar() {
+    const el = document.getElementById('levelBar');
+    if (!el) return;
+    el.innerHTML = `
+        <span class="lv-pill cur">第 ${G.handNo || 1} 局 · 本局打 <b>${LEVEL}</b> · ♥${LEVEL} 为赖子</span>
+        <span class="lv-pill">我方 <b>${levelRank(G.teamLevels[0])}</b> · 我 + AI 对家</span>
+        <span class="lv-pill">对方 <b>${levelRank(G.teamLevels[1])}</b> · AI 左 + AI 右</span>`;
+}
 function renderPlayArea() {
     const el = document.getElementById('playArea');
     if (!G.lastPlay) { el.innerHTML = ''; return; }
@@ -1346,6 +1383,8 @@ function log(msg, cls = '') {
 }
 
 function deal() {
+    LEVEL = levelRank(G.level);
+    G.handNo = (G.handNo || 0) + 1;
     const deck = shuffle(makeDeck());
     for (let i = 0; i < 4; i++) G.hands[i] = [];
     for (let i = 0; i < deck.length; i++) G.hands[i % 4].push(deck[i]);
@@ -1353,10 +1392,148 @@ function deal() {
     G.currentPlayer = 0; G.lastPlay = null; G.lastPlayer = -1; G.passCount = 0;
     G.selected.clear(); G.finished = []; G.playedCards = []; G.customCardGroups = []; G.reorderMode = false;
     G.playedRanks = [{}, {}, {}, {}]; G.newRoundStarter = null;
-    G.aiSkipCounts = [0, 0, 0, 0]; G.playing = true;
-    renderHand(); renderCounts(); renderRanks(); renderPlayArea(); renderCounter(); renderAiHands();
-    log('=== 新一局开始，你先出牌 ===', 'sys');
+    G.aiSkipCounts = [0, 0, 0, 0]; G.playing = false; G.handOver = false;
+    G.awaitTribute = false; G.pendingReturns = []; G.tributeStarter = 0;
+    hideTributeModal();
+    document.getElementById('actionPanel').textContent = '';
+    renderHand(); renderCounts(); renderRanks(); renderPlayArea(); renderCounter(); renderAiHands(); renderLevelBar();
+    log(`=== 第 ${G.handNo} 局 · 本局打 ${LEVEL}（♥${LEVEL} 为赖子） ===`, 'sys');
+    if (G.pendingTribute) applyTribute();
+    else beginPlay(0);
+}
+function beginPlay(starter) {
+    G.playing = true;
+    G.currentPlayer = starter;
+    G.lastPlay = null; G.lastPlayer = -1; G.passCount = 0;
+    G.newRoundStarter = null; G.selected.clear();
+    G.awaitTribute = false;
+    renderHand(); renderCounts(); renderRanks(); renderPlayArea(); renderCounter(); renderAiHands(); renderLevelBar();
+    log(`${playerName(starter)} 先出牌`, 'sys');
     updateControls();
+    if (starter !== 0) {
+        window.setTimeout(() => { if (G.playing && G.currentPlayer !== 0) aiTurn(); }, AI_THINK_DELAY);
+    }
+}
+function resetMatch() {
+    G.teamLevels = [2, 2];
+    G.level = 2;
+    G.handNo = 0;
+    G.matchOver = false;
+    G.handOver = false;
+    G.pendingNext = false;
+    G.pendingTribute = null;
+    G.pendingReturns = [];
+    G.awaitTribute = false;
+    LEVEL = '2';
+    renderLevelBar();
+    document.getElementById('nextBtn').style.display = 'none';
+    deal();
+}
+
+// ==================== 进贡 / 还贡 ====================
+function isReturnEligible(card) {
+    if (isWild(card) || card.suit === 'JOKER') return false;
+    const v = rankValueForStraight(card.rank);
+    return v >= 2 && v <= 10;
+}
+function pickTributeCard(hand) {
+    // 进贡：红桃级牌（赖子）除外，进最大的一张
+    const eligible = hand.filter(c => !isWild(c));
+    const pool = eligible.length ? eligible : hand;
+    return [...pool].sort((a, b) => rankValue(b.rank) - rankValue(a.rank))[0] || null;
+}
+function pickReturnCard(hand) {
+    // 还贡：优先还 10 以下最小的牌
+    const eligible = hand.filter(isReturnEligible);
+    const pool = eligible.length ? eligible : hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
+    return [...pool].sort((a, b) => rankValue(a.rank) - rankValue(b.rank))[0] || null;
+}
+function applyTribute() {
+    const t = G.pendingTribute;
+    G.pendingTribute = null;
+    if (!t) { beginPlay(0); return; }
+    G.playing = false;
+    G.awaitTribute = true;
+    G.tributeStarter = t.starter;
+    updateControls();
+    const payers = t.pairs.map(p => p.from);
+
+    // 抗贡：进贡方（双下时两人合计）持有两张大王则免进贡，仍由第一名先出
+    const bigJokers = payers.reduce((n, p) => n + G.hands[p].filter(c => c.rank === '大王').length, 0);
+    if (bigJokers >= 2) {
+        log('抗贡成功：进贡方持有两张大王，本局免进贡', 'sys');
+        G.awaitTribute = false;
+        beginPlay(t.antiStarter);
+        return;
+    }
+
+    const returns = [];
+    for (const pair of t.pairs) {
+        const card = pickTributeCard(G.hands[pair.from]);
+        if (!card) continue;
+        G.hands[pair.from] = G.hands[pair.from].filter(c => c.id !== card.id);
+        G.hands[pair.to].push(card);
+        log(`${playerName(pair.from)} 向 ${playerName(pair.to)} 进贡 ${cardName(card)}`, 'sys');
+        returns.push({ payer: pair.from, receiver: pair.to, card });
+    }
+
+    for (const r of returns) {
+        if (r.receiver === 0) { G.pendingReturns.push(r); continue; }
+        const back = pickReturnCard(G.hands[r.receiver]);
+        if (!back) continue;
+        G.hands[r.receiver] = G.hands[r.receiver].filter(c => c.id !== back.id);
+        G.hands[r.payer].push(back);
+        log(`${playerName(r.receiver)} 还贡给 ${playerName(r.payer)}：${cardName(back)}`, 'sys');
+    }
+
+    for (let i = 0; i < 4; i++) G.hands[i].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
+    renderHand(); renderCounts(); renderCounter(); renderLevelBar();
+    if (G.pendingReturns.length) showTributeReturnPanel();
+    else finishTribute();
+}
+function hideTributeModal() {
+    document.getElementById('tributeModal').classList.add('hidden');
+    document.getElementById('tributeChoices').innerHTML = '';
+}
+function showTributeReturnPanel() {
+    const r = G.pendingReturns[0];
+    if (!r) { finishTribute(); return; }
+    const hand = G.hands[0];
+    let eligible = hand.filter(isReturnEligible);
+    if (!eligible.length) eligible = hand.filter(c => !isWild(c) && c.suit !== 'JOKER');
+    document.getElementById('tributeMsg').innerHTML =
+        `你收到 <b>${playerName(r.payer)}</b> 进贡的 <b>${cardName(r.card)}</b>，请选择一张不大于 10 的牌还贡。`;
+    const box = document.getElementById('tributeChoices');
+    box.innerHTML = eligible.map(c => {
+        const red = c.suit === '♥' || c.suit === '♦';
+        const label = c.suit === 'JOKER' ? c.rank : `${c.rank}<span class="${red ? 'suit-red' : ''}">${c.suit}</span>`;
+        return `<button class="choice" data-id="${c.id}">${label}</button>`;
+    }).join('');
+    box.querySelectorAll('.choice').forEach(btn => {
+        btn.onclick = () => returnTributeCard(parseInt(btn.dataset.id, 10));
+    });
+    document.getElementById('tributeModal').classList.remove('hidden');
+}
+function returnTributeCard(id) {
+    const r = G.pendingReturns[0];
+    if (!r) { hideTributeModal(); finishTribute(); return; }
+    const back = G.hands[0].find(c => c.id === id);
+    if (!back) return;
+    G.hands[0] = G.hands[0].filter(c => c.id !== back.id);
+    G.hands[r.payer].push(back);
+    log(`我 还贡给 ${playerName(r.payer)}：${cardName(back)}`, 'my');
+    G.pendingReturns.shift();
+    hideTributeModal();
+    renderHand(); renderCounts();
+    if (G.pendingReturns.length) showTributeReturnPanel();
+    else finishTribute();
+}
+function finishTribute() {
+    G.pendingReturns = [];
+    G.awaitTribute = false;
+    for (let i = 0; i < 4; i++) G.hands[i].sort((a, b) => rankValue(a.rank) - rankValue(b.rank));
+    renderHand(); renderCounts(); renderCounter(); renderLevelBar();
+    beginPlay(G.tributeStarter ?? 0);
 }
 function playerName(p) { return ['我', 'AI 左', 'AI 对家', 'AI 右'][p]; }
 function cardName(c) { return c.suit === 'JOKER' ? c.rank : c.suit + c.rank; }
@@ -1391,43 +1568,97 @@ function pass(player) {
         const finished = G.hands[finisher].length === 0;
         G.lastPlay = null; G.passCount = 0;
         if (finished) {
-            // 接风：出完牌的玩家由对家接手领出；对家也出完则顺延给下一位
-            const mate = (finisher + 2) % 4;
-            G.newRoundStarter = G.hands[mate].length > 0 ? mate : (finisher + 1) % 4;
+            // 接风按座位顺序：出完牌的玩家之后，下一位仍有手牌的玩家领出
+            let nextSeat = finisher;
+            for (let i = 1; i <= 3; i++) {
+                const s = (finisher + i) % 4;
+                if (G.hands[s].length > 0) { nextSeat = s; break; }
+            }
+            G.newRoundStarter = nextSeat;
         } else {
             G.newRoundStarter = finisher;
         }
-        renderPlayArea(); renderCounter(); log(finished ? '一轮结束，由对家接风' : '一轮结束，重新出牌', 'sys');
+        renderPlayArea(); renderCounter();
+        log(finished ? `一轮结束，按顺序由 ${playerName(G.newRoundStarter)} 接风` : '一轮结束，重新出牌', 'sys');
     }
 }
 function checkGameOver() {
+    if (G.handOver) return;
     if (G.hands.every(h => h.length === 0)) { finishGame(); return; }
     const doneA = [0, 2].filter(p => G.hands[p].length === 0).length;
     const doneB = [1, 3].filter(p => G.hands[p].length === 0).length;
     if (doneA === 2 || doneB === 2) finishGame();
 }
 function finishGame() {
+    if (G.handOver) return;
+    G.handOver = true;
     G.playing = false;
     const remaining = [0,1,2,3].filter(p => !G.finished.includes(p));
     remaining.sort((a,b) => G.hands[a].length - G.hands[b].length);
     G.finished = G.finished.concat(remaining);
     renderRanks();
-    const names = G.finished.map((p, i) => `${i+1}. ${playerName(p)}`).join('  ');
+    const order = G.finished;
+    const names = order.map((p, i) => `${i+1}. ${playerName(p)}`).join('  ');
     log(`本局结束：${names}`, 'sys');
-    const first = G.finished[0], second = G.finished[1];
-    const teamOf = p => (p === 0 || p === 2) ? 'A' : 'B';
-    if (teamOf(first) === teamOf(second)) log(`🎉 双下！${teamOf(first) === 'A' ? '我方' : '对方'}赢了`, 'sys');
-    else log(`单下，${teamOf(first) === 'A' ? '我方' : '对方'}拿了第 1 名`, 'sys');
+
+    const up = order[0];
+    const mateRank = order.indexOf((up + 2) % 4) + 1; // 2/3/4
+    const doubleDown = mateRank === 2;
+    const team = up % 2; // 0 = 我方(0/2)，1 = 对方(1/3)
+    const oldLevel = G.teamLevels[team];
+    const handLevel = G.level; // 本局实际打的级牌
+    const inc = doubleDown ? 3 : (mateRank === 3 ? 2 : 1);
+    let newLevel = Math.min(14, oldLevel + inc);
+    let matchWon = false;
+    if (oldLevel >= 14) {
+        // 打 A 的一局必须双下才能过 A；否则继续打 A
+        if (handLevel >= 14 && doubleDown) matchWon = true;
+        newLevel = 14;
+    } else if (newLevel >= 14) {
+        newLevel = 14; // 不能跳过 A
+    }
+    G.teamLevels[team] = newLevel;
+    G.level = newLevel;
+    renderLevelBar();
+
+    const teamName = team === 0 ? '我方' : '对方';
+    const resultText = doubleDown ? '双下' : (mateRank === 3 ? '单下（1、3名）' : '单下（1、4名）');
+    const levelText = oldLevel >= 14 ? '下局继续打 A' : `升 ${inc} 级，下局打 ${levelRank(newLevel)}`;
+    const panel = document.getElementById('actionPanel');
+    if (matchWon) {
+        G.matchOver = true;
+        G.pendingNext = false;
+        G.pendingTribute = null;
+        log(`🎉 ${teamName}在 A 级双下过 A，比赛结束！`, 'sys');
+        panel.className = 'match-over';
+        panel.innerHTML = `🎉 <b>${teamName}在 A 级双下过 A，赢得比赛！</b><br><span class="sub">点击上方「重开」开始新比赛</span>`;
+    } else {
+        log(`${teamName}${resultText}，${levelText}（我方 ${levelRank(G.teamLevels[0])} / 对方 ${levelRank(G.teamLevels[1])}）`, 'sys');
+        panel.className = '';
+        panel.innerHTML = `<b>本局结束：${names}</b><br><span class="sub">${teamName}${resultText}，${levelText}；下局由 ${playerName(order[0])} 先出　→ 点击上方「下一局」继续</span>`;
+        // 下一局进贡安排：单下时末游→上游；双下时末游→上游、三游→二游
+        const pairs = doubleDown
+            ? [{ from: order[3], to: order[0] }, { from: order[2], to: order[1] }]
+            : [{ from: order[3], to: order[0] }];
+        G.pendingTribute = {
+            pairs,
+            starter: order[0],      // 下一局由上一局第一名先出
+            antiStarter: order[0],  // 抗贡时同样由第一名先出
+            doubleDown
+        };
+        G.pendingNext = true;
+    }
     updateControls();
 }
 function updateControls() {
-    const myTurn = G.playing && G.currentPlayer === 0 && G.hands[0].length > 0;
+    const activeHand = G.playing && !G.awaitTribute && !G.matchOver;
+    const myTurn = activeHand && G.currentPlayer === 0 && G.hands[0].length > 0;
     document.getElementById('playBtn').disabled = !myTurn;
     document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay;
     document.getElementById('hintBtn').disabled = !myTurn;
     document.getElementById('flushHintBtn').disabled = !myTurn;
-    document.getElementById('reorderBtn').disabled = !G.playing;
-    document.getElementById('restoreSortBtn').disabled = !G.playing || G.reorderMode || !G.customCardGroups.length;
+    document.getElementById('reorderBtn').disabled = !activeHand;
+    document.getElementById('restoreSortBtn').disabled = !activeHand || G.reorderMode || !G.customCardGroups.length;
     document.getElementById('reorderConfirmBtn').style.display = G.reorderMode ? '' : 'none';
     document.getElementById('reorderCancelBtn').style.display = G.reorderMode ? '' : 'none';
     document.getElementById('reorderBtn').style.display = G.reorderMode ? 'none' : '';
@@ -1435,7 +1666,12 @@ function updateControls() {
     document.getElementById('passBtn').disabled = !myTurn || !G.lastPlay || G.reorderMode;
     document.getElementById('hintBtn').disabled = !myTurn || G.reorderMode;
     document.getElementById('flushHintBtn').disabled = !myTurn || G.reorderMode;
-    for (let i = 0; i < 4; i++) document.getElementById('p' + i).classList.toggle('active', G.playing && G.currentPlayer === i);
+    const nextBtn = document.getElementById('nextBtn');
+    const nextVisible = G.pendingNext && !G.matchOver;
+    nextBtn.style.display = nextVisible ? '' : 'none';
+    nextBtn.classList.toggle('show', nextVisible);
+    nextBtn.disabled = G.awaitTribute;
+    for (let i = 0; i < 4; i++) document.getElementById('p' + i).classList.toggle('active', activeHand && G.currentPlayer === i);
 }
 function advanceTurn() {
     if (!G.playing) return;
@@ -1450,7 +1686,7 @@ function advanceTurn() {
     }
     G.currentPlayer = next; updateControls();
     if (G.playing && G.currentPlayer !== 0) {
-        window.setTimeout(() => { if (G.playing && G.currentPlayer !== 0) aiTurn(); }, 520);
+        window.setTimeout(() => { if (G.playing && G.currentPlayer !== 0) aiTurn(); }, AI_THINK_DELAY);
     }
 }
 
@@ -1649,9 +1885,15 @@ document.getElementById('restoreSortBtn').onclick = () => {
     renderHand();
 };
 
-document.getElementById('restartBtn').onclick = () => { document.getElementById('log').innerHTML = ''; deal(); };
+document.getElementById('restartBtn').onclick = () => { document.getElementById('log').innerHTML = ''; resetMatch(); };
+document.getElementById('nextBtn').onclick = () => {
+    if (!G.pendingNext || G.matchOver || G.awaitTribute) return;
+    G.pendingNext = false;
+    document.getElementById('nextBtn').style.display = 'none';
+    deal();
+};
 
-deal();
+resetMatch();
 </script>
 </body>
 </html>
